@@ -1,7 +1,7 @@
 {% comment %}
-  Auraliasilk 5.1 - The Rift Gate (Yin & Yang Dynamics)
-  Concept: Spirit (Video) vs. Matter (Video).
-  Interaction: Ebb and Flow with Blur/Grayscale recession.
+  AURALIA RIFT GATE
+  Version: 5.2 (Z-Index Fix & CN Localization)
+  Author: The Code Alchemist
 {% endcomment %}
 
 {%- style -%}
@@ -10,7 +10,7 @@
     --gate-height-mb: {{ section.settings.section_height_mb }}vh;
     --base-gold: #D4AF37;
     --void-bg: #050505;
-    /* 极度优雅的“重门”惯性，模拟液压或太极推手的阻尼感 */
+    /* 液压阻尼感曲线 */
     --transition-curve: cubic-bezier(0.22, 1, 0.36, 1); 
     --overlay-color: #000000;
   }
@@ -22,46 +22,48 @@
     position: relative;
     overflow: hidden;
     background-color: var(--void-bg);
+    /* 确保容器本身不会意外覆盖其他层级 */
+    z-index: 0;
   }
 
-  /* --- [ 核心面板：气韵流动 ] --- */
+  /* --- [ 面板 ] --- */
   .rift-panel {
     position: relative;
-    flex: 1; /* 默认 50% */
+    flex: 1; 
     height: 100%;
     overflow: hidden;
-    transition: all 1.2s var(--transition-curve); /* 延长时间以增加沉浸感 */
+    transition: all 1.2s var(--transition-curve); 
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     text-decoration: none;
-    /* 默认状态：轻微压暗 */
     filter: brightness(0.9);
+    /* 关键修正：默认层级设为 1，确保在 Header 之下 */
+    z-index: 1;
   }
 
-  /* --- [ 交互逻辑：阴阳消长 ] --- */
+  /* --- [ 交互逻辑 ] --- */
   @media (hover: hover) {
-    /* 1. 当鼠标进入容器：整体进入“待定”状态 */
     .rift-wrapper:hover .rift-panel {
-      filter: brightness(0.4) grayscale(1) blur(6px); /* 闲置方：黑白、模糊、晦暗 */
-      flex: 0.8; /* 闲置方收缩 */
+      filter: brightness(0.4) grayscale(1) blur(6px); 
+      flex: 0.8; 
     }
     
-    /* 2. 当鼠标聚焦特定面板：激活“显化”状态 */
     .rift-wrapper .rift-panel:hover {
-      flex: 3; /* 扩张至 75% 左右，更有张力 */
-      filter: brightness(1.05) grayscale(0) blur(0px); /* 激活方：全彩、清晰、高亮 */
-      z-index: 5;
-      box-shadow: 0 0 50px rgba(0,0,0,0.8); /* 增加层级深度感 */
+      flex: 3; 
+      filter: brightness(1.05) grayscale(0) blur(0px); 
+      /* 关键修正：悬停时层级提升到 3，依然远低于 Header (通常是 10+) */
+      z-index: 3;
+      box-shadow: 0 0 50px rgba(0,0,0,0.8); 
     }
   }
 
-  /* --- [ 媒体层：视频与图片 ] --- */
+  /* --- [ 媒体层 ] --- */
   .rift-media-container {
     position: absolute;
     top: 0; left: 0; width: 100%; height: 100%;
-    z-index: 0;
+    z-index: 0; /* 位于最底层 */
   }
   
   .rift-media-container img,
@@ -73,13 +75,12 @@
     will-change: transform;
   }
 
-  /* 悬停时的视差推进感 */
   .rift-panel:hover .rift-media-container img,
   .rift-panel:hover .rift-media-container video {
     transform: scale(1.1);
   }
 
-  /* --- [ 遮罩与材质 ] --- */
+  /* --- [ 遮罩 ] --- */
   .rift-overlay {
     position: absolute;
     top: 0; left: 0; width: 100%; height: 100%;
@@ -89,7 +90,7 @@
     pointer-events: none;
   }
 
-  /* 噪点纹理：统一视觉质感，消除视频数码味 */
+  /* 噪点 */
   .rift-panel::after {
     content: "";
     position: absolute;
@@ -101,14 +102,15 @@
     mix-blend-mode: overlay;
   }
 
-  /* --- [ 金线：呼吸的边界 ] --- */
+  /* --- [ 金线分割 ] --- */
   .rift-divider {
     position: absolute;
     left: 50%;
-    top: 10%; bottom: 10%; /* 不顶天立地，更像悬浮的能量束 */
+    top: 10%; bottom: 10%; 
     width: 1px;
     background: linear-gradient(to bottom, transparent, var(--base-gold), transparent);
-    z-index: 10;
+    /* 关键修正：层级设为 4，高于内容但低于 Header */
+    z-index: 4; 
     pointer-events: none;
     transition: left 1.2s var(--transition-curve), opacity 0.5s ease;
     box-shadow: 0 0 8px var(--base-gold);
@@ -120,8 +122,6 @@
     50% { opacity: 0.8; box-shadow: 0 0 15px var(--base-gold); }
   }
 
-  /* 悬停交互时，金线随动逻辑由 flex 布局自然驱动，
-     但在视觉上我们让它淡化，仿佛因为两界融合而消失 */
   .rift-wrapper:hover .rift-divider {
     opacity: 0; 
     transition-duration: 0.3s;
@@ -130,24 +130,22 @@
   /* --- [ 内容排版 ] --- */
   .rift-content {
     position: relative;
-    z-index: 3;
+    /* 关键修正：内容层级设为 2，确保在遮罩之上，但在 Header 之下 */
+    z-index: 2;
     text-align: center;
     color: #fff;
     padding: 40px;
     max-width: 500px;
-    /* 初始状态：文字清晰 */
     opacity: 1;
     transform: translateY(0);
     transition: all 0.8s var(--transition-curve);
   }
 
-  /* 未被悬停时，文字随面板一起模糊/消隐 */
   .rift-wrapper:hover .rift-panel:not(:hover) .rift-content {
     opacity: 0;
     transform: translateY(20px);
   }
   
-  /* 被悬停时，文字上浮显现 */
   .rift-panel:hover .rift-content {
     transform: translateY(-10px);
   }
@@ -165,14 +163,13 @@
   .rift-title {
     font-family: var(--font-heading-family);
     font-size: clamp(32px, 5vw, 60px);
-    font-weight: 300; /* 更轻盈的字体 */
+    font-weight: 300; 
     line-height: 1.1;
     letter-spacing: 0.02em;
     margin-bottom: 40px;
     text-shadow: 0 10px 30px rgba(0,0,0,0.9);
   }
 
-  /* 按钮：极简线条 */
   .rift-btn {
     display: inline-block;
     padding: 14px 36px;
@@ -193,13 +190,10 @@
     box-shadow: 0 0 25px rgba(212, 175, 55, 0.2);
   }
 
-  /* --- [ 移动端适配 ] --- */
   @media screen and (max-width: 768px) {
     .rift-wrapper { flex-direction: column; height: var(--gate-height-mb); }
     .rift-panel { width: 100%; flex: 1 !important; filter: none !important; }
     .rift-divider { width: 80%; height: 1px; left: 10%; top: 50%; bottom: auto; }
-    
-    /* 移动端保留点击反馈，但不做剧烈的模糊交互 */
     .rift-content { opacity: 1 !important; transform: none !important; }
     .rift-title { font-size: 32px; }
   }
@@ -209,10 +203,9 @@
   
   <div class="rift-divider"></div>
 
-  {% comment %} === LEFT GATE (SPIRIT / YIN) === {% endcomment %}
+  {% comment %} === 左门 (阴/灵) === {% endcomment %}
   <a href="{{ section.settings.link_1 }}" class="rift-panel panel-left">
     <div class="rift-media-container">
-      {% comment %} 优先显示视频 {% endcomment %}
       {% if section.settings.video_1 != blank %}
         {{ section.settings.video_1 | video_tag: autoplay: true, loop: true, muted: true, playsinline: true, controls: false, image_size: '1200x' }}
       {% elsif section.settings.image_1 != blank %}
@@ -230,7 +223,7 @@
     </div>
   </a>
 
-  {% comment %} === RIGHT GATE (MATTER / YANG) === {% endcomment %}
+  {% comment %} === 右门 (阳/物) === {% endcomment %}
   <a href="{{ section.settings.link_2 }}" class="rift-panel panel-right">
     <div class="rift-media-container">
       {% if section.settings.video_2 != blank %}
@@ -254,11 +247,11 @@
 
 {% schema %}
 {
-  "name": "⛩️ Rift Gate (Dynamic)",
+  "name": "⛩️ 阴阳裂隙 (双界门)",
   "settings": [
     {
       "type": "header",
-      "content": "📐 Layout"
+      "content": "📐 尺寸与布局"
     },
     {
       "type": "range",
@@ -267,7 +260,7 @@
       "max": 100,
       "step": 5,
       "unit": "vh",
-      "label": "Desktop Height",
+      "label": "电脑端高度 (Screen Height)",
       "default": 95
     },
     {
@@ -277,7 +270,7 @@
       "max": 100,
       "step": 5,
       "unit": "vh",
-      "label": "Mobile Height",
+      "label": "手机端高度 (Screen Height)",
       "default": 80
     },
     {
@@ -287,87 +280,87 @@
       "max": 90,
       "step": 10,
       "unit": "%",
-      "label": "Vignette Darkening",
+      "label": "暗角压暗浓度 (Vignette)",
       "default": 30
     },
     {
       "type": "header",
-      "content": "🌑 Left Gate (Spirit/Yin)"
+      "content": "🌑 左门配置 (SPIRIT / YIN)"
     },
     {
       "type": "video",
       "id": "video_1",
-      "label": "Background Video (Micro-motion)"
+      "label": "背景视频 (建议: 微动/虚空)"
     },
     {
       "type": "image_picker",
       "id": "image_1",
-      "label": "Fallback Image"
+      "label": "备用图片 (无视频时显示)"
     },
     {
       "type": "text",
       "id": "subtitle_1",
-      "label": "Subtitle",
+      "label": "小标题 (Subtitle)",
       "default": "THE VOID"
     },
     {
       "type": "text",
       "id": "title_1",
-      "label": "Heading",
+      "label": "主标题 (Heading)",
       "default": "Spirit"
     },
     {
       "type": "text",
       "id": "btn_1",
-      "label": "Button",
+      "label": "按钮文案",
       "default": "ENTER"
     },
     {
       "type": "url",
       "id": "link_1",
-      "label": "Link"
+      "label": "跳转链接"
     },
     {
       "type": "header",
-      "content": "🌕 Right Gate (Matter/Yang)"
+      "content": "🌕 右门配置 (MATTER / YANG)"
     },
     {
       "type": "video",
       "id": "video_2",
-      "label": "Background Video (Light/Texture)"
+      "label": "背景视频 (建议: 实体/光影)"
     },
     {
       "type": "image_picker",
       "id": "image_2",
-      "label": "Fallback Image"
+      "label": "备用图片"
     },
     {
       "type": "text",
       "id": "subtitle_2",
-      "label": "Subtitle",
+      "label": "小标题 (Subtitle)",
       "default": "THE FORM"
     },
     {
       "type": "text",
       "id": "title_2",
-      "label": "Heading",
+      "label": "主标题 (Heading)",
       "default": "Matter"
     },
     {
       "type": "text",
       "id": "btn_2",
-      "label": "Button",
+      "label": "按钮文案",
       "default": "EXPLORE"
     },
     {
       "type": "url",
       "id": "link_2",
-      "label": "Link"
+      "label": "跳转链接"
     }
   ],
   "presets": [
     {
-      "name": "⛩️ Rift Gate (Dynamic)"
+      "name": "⛩️ 阴阳裂隙 (双界门)"
     }
   ]
 }
