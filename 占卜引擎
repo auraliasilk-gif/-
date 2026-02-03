@@ -1,0 +1,439 @@
+{% schema %}
+{
+  "name": "🔮 Oracle (V7.2 Locked)",
+  "settings": [
+    {
+      "type": "header",
+      "content": "🌌 核心设置 (Core)"
+    },
+    {
+      "type": "range",
+      "id": "card_width_base",
+      "min": 200,
+      "max": 500,
+      "step": 10,
+      "unit": "px",
+      "label": "💳 卡片基准宽度 (手机端)",
+      "default": 300,
+      "info": "电脑端会自动放大 1.2 倍。比例已锁定为 2:3。"
+    },
+    {
+      "type": "header",
+      "content": "✍️ 文字设置 (Typography)"
+    },
+    {
+      "type": "range",
+      "id": "decree_font_size",
+      "min": 14,
+      "max": 60,
+      "step": 1,
+      "unit": "px",
+      "label": "📜 律令(结果)文字大小",
+      "default": 32,
+      "info": "控制下方主结果文字的大小。"
+    },
+    {
+      "type": "range",
+      "id": "name_font_size",
+      "min": 12,
+      "max": 30,
+      "step": 1,
+      "unit": "px",
+      "label": "法器/产品名文字大小",
+      "default": 14
+    },
+    {
+      "type": "header",
+      "content": "🌌 黑洞引力场 (VFX)"
+    },
+    {
+      "type": "range",
+      "id": "gravity_strength",
+      "min": 0,
+      "max": 100,
+      "step": 5,
+      "unit": "%",
+      "label": "引力场强度 (Core Darkness)",
+      "default": 90
+    },
+    {
+      "type": "range",
+      "id": "gravity_radius",
+      "min": 30,
+      "max": 150,
+      "step": 5,
+      "unit": "%",
+      "label": "视界半径 (Event Horizon)",
+      "default": 80
+    },
+    {
+      "type": "range",
+      "id": "card_radius",
+      "min": 0,
+      "max": 40,
+      "step": 1,
+      "unit": "px",
+      "label": "卡片圆角",
+      "default": 12
+    },
+    {
+      "type": "header",
+      "content": "🎨 色彩与动态"
+    },
+    {
+      "type": "color",
+      "id": "dynamic_theme_color",
+      "label": "呼吸光/主题颜色",
+      "default": "#D4AF37",
+      "info": "🔥 请绑定元字段 (Theme Color)。"
+    },
+    {
+      "type": "color",
+      "id": "decree_text_color",
+      "label": "律令/结果文字颜色",
+      "default": "#F6E6B1"
+    },
+    {
+      "type": "range",
+      "id": "glow_intensity",
+      "min": 10,
+      "max": 100,
+      "step": 10,
+      "unit": "%",
+      "label": "呼吸光强度",
+      "default": 60
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_golden_sweep",
+      "label": "开启金色扫光特效",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "noise_opacity",
+      "min": 0,
+      "max": 100,
+      "step": 5,
+      "unit": "%",
+      "label": "噪点材质强度",
+      "default": 30
+    },
+    {
+      "type": "text",
+      "id": "btn_text",
+      "label": "开始按钮文案",
+      "default": "REVEAL DESTINY"
+    },
+    {
+      "type": "text",
+      "id": "link_text",
+      "label": "认领按钮文案",
+      "default": "CLAIM YOUR ARTIFACT"
+    }
+  ],
+  "presets": [{ "name": "🔮 Oracle (V7.2 Locked)" }]
+}
+{% endschema %}
+
+{% comment %} === 数据源预处理 === {% endcomment %}
+{% assign room_name = metaobject.name %}
+{% assign room_desc = metaobject.description %}
+{% assign deck_source = metaobject.linked_deck.value %}
+
+{% assign active_color = metaobject.theme_color.value | default: metaobject.theme_color | default: section.settings.dynamic_theme_color %}
+{% assign decree_color = section.settings.decree_text_color %}
+
+{% assign glow_opacity = section.settings.glow_intensity | divided_by: 100.0 %}
+{% assign glow_color = active_color | color_modify: 'alpha', glow_opacity %}
+
+{% assign opacity_val = section.settings.gravity_strength | divided_by: 100.0 %}
+{% assign radius_val = section.settings.gravity_radius %}
+
+<style>
+  /* [ 沉浸容器 ] */
+  .oracle-sanctuary {
+    position: relative;
+    width: 100vw; 
+    min-height: 90vh;
+    
+    background: radial-gradient(
+      circle at center,
+      rgba(0, 0, 0, {{ opacity_val }}) 0%,
+      rgba(0, 0, 0, {{ opacity_val | times: 0.95 }}) 15%,
+      rgba(0, 0, 0, {{ opacity_val | times: 0.6 }}) 40%,
+      rgba(0, 0, 0, {{ opacity_val | times: 0.2 }}) 70%,
+      rgba(0, 0, 0, 0) {{ radius_val }}%
+    );
+
+    padding-top: 15vh;
+    padding-bottom: 15vh;
+    
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    overflow: hidden;
+
+    /* --- 核心变量定义 --- */
+    --main-color: {{ active_color }};
+    --glow-color: {{ glow_color }};
+    --decree-col: {{ decree_color }};
+    
+    /* 大小控制变量 */
+    --base-w: {{ section.settings.card_width_base }}px; /* 手机基准宽 */
+    --base-h: calc(var(--base-w) * 1.5); /* 锁定 2:3 比例 (W * 1.5 = H) */
+    
+    --card-r: {{ section.settings.card_radius }}px;
+    --noise-op: {{ section.settings.noise_opacity | divided_by: 100.0 }};
+    
+    /* 字体大小变量 */
+    --decree-size: {{ section.settings.decree_font_size }}px;
+    --name-size: {{ section.settings.name_font_size }}px;
+
+    color: var(--main-color);
+  }
+
+  /* [ 纹理层 ] */
+  .oracle-sanctuary::after {
+    content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.1'/%3E%3C/svg%3E");
+    opacity: 0.15; z-index: 0; pointer-events: none; mix-blend-mode: screen;
+    mask-image: radial-gradient(circle at center, black 0%, black 40%, transparent {{ radius_val }}%);
+    -webkit-mask-image: radial-gradient(circle at center, black 0%, black 40%, transparent {{ radius_val }}%);
+  }
+
+  /* [ 引导层 ] */
+  .oracle-intro { z-index: 2; text-align: center; transition: opacity 0.8s; padding: 20px; }
+  .oracle-intro.hidden { opacity: 0; pointer-events: none; }
+
+  .oracle-title { font-family: serif; font-size: 2.5rem; letter-spacing: 0.2em; margin-bottom: 20px; text-transform: uppercase; color: var(--main-color); }
+  .oracle-subtitle { font-family: sans-serif; font-size: 0.9rem; line-height: 1.6; color: rgba(255,255,255,0.7); margin-bottom: 40px; white-space: pre-wrap; max-width: 600px; }
+
+  /* [ 按钮 ] */
+  .oracle-btn-base {
+    display: inline-block; border: 1px solid var(--main-color); color: var(--main-color);
+    background: rgba(0,0,0,0.3); padding: 15px 30px; font-size: 0.9rem; letter-spacing: 0.2em;
+    text-transform: uppercase; text-decoration: none; cursor: pointer; transition: all 0.4s ease;
+    backdrop-filter: blur(5px);
+  }
+  .oracle-btn-base:hover { background: var(--main-color); color: #000; box-shadow: 0 0 30px var(--glow-color); }
+
+  /* [ 结果层容器 ] */
+  .oracle-result {
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%) scale(0.9);
+    opacity: 0; z-index: 2; pointer-events: none;
+    transition: all 1s cubic-bezier(0.2, 0.8, 0.2, 1);
+    display: flex; flex-direction: column; align-items: center;
+    /* 确保容器本身不限制溢出，防止阴影被切 */
+  }
+  .oracle-result.active { opacity: 1; pointer-events: auto; transform: translate(-50%, -50%) scale(1); }
+
+  /* === 尺寸控制核心 (V7.2) === */
+  
+  /* 手机端默认 (使用基准变量) */
+  .result-card-frame {
+    width: min(var(--base-w), 90vw);
+    height: calc(min(var(--base-w), 90vw) * 1.5); /* 锁定 2:3 比例 */
+    
+    position: relative; perspective: 1500px; margin-bottom: 20px;
+    cursor: pointer; -webkit-tap-highlight-color: transparent;
+  }
+
+  /* 电脑端 (宽度 > 768px)：强制放大 1.2 倍 */
+  @media screen and (min-width: 768px) {
+    .result-card-frame {
+      width: calc(var(--base-w) * 1.2);
+      height: calc(var(--base-h) * 1.2);
+    }
+  }
+
+  /* [ 卡片内部 ] */
+  .result-card-inner { 
+    width: 100%; height: 100%; position: relative; 
+    transition: transform 1.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+    transform-style: preserve-3d; transform: rotateY(0deg); 
+  }
+  .result-card-inner.flipped { transform: rotateY(180deg); }
+
+  /* [ 通用卡面 ] */
+  .face { 
+    position: absolute; width: 100%; height: 100%; 
+    -webkit-backface-visibility: hidden; backface-visibility: hidden; 
+    border-radius: var(--card-r); overflow: hidden; 
+    
+    box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+    border: 1px solid var(--main-color);
+    background: #050505;
+    animation: cardPulse 4s infinite ease-in-out;
+  }
+
+  @keyframes cardPulse {
+    0%, 100% { box-shadow: 0 20px 50px rgba(0,0,0,0.8), 0 0 0 transparent; }
+    50% { box-shadow: 0 20px 50px rgba(0,0,0,0.8), 0 0 40px var(--glow-color); }
+  }
+
+  {% if section.settings.enable_golden_sweep %}
+  .face::before {
+    content: ""; position: absolute; top: 0; left: -150%; width: 100%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+    transform: skewX(-25deg);
+    animation: goldenSweep 6s infinite ease-in-out;
+    pointer-events: none; z-index: 5; mix-blend-mode: overlay;
+  }
+  @keyframes goldenSweep {
+    0%, 40% { left: -150%; }
+    50% { left: 150%; }
+    100% { left: 150%; }
+  }
+  {% endif %}
+
+  .face::after {
+    content: ""; position: absolute; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='1'/%3E%3C/svg%3E");
+    mix-blend-mode: overlay; opacity: var(--noise-op); pointer-events: none; z-index: 2;
+    filter: contrast(120%);
+  }
+  
+  .face-front { transform: rotateY(0deg); }
+  .face-front img { width: 100%; height: 100%; object-fit: cover; filter: brightness(0.9); }
+
+  .face-back {
+    transform: rotateY(180deg);
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    padding: 30px; box-shadow: inset 0 0 50px rgba(0,0,0,0.9);
+  }
+  
+  .card-back-content { position: relative; z-index: 3; text-align: center; width: 100%; }
+  .energy-code { font-family: monospace; color: var(--main-color); letter-spacing: 2px; margin-bottom: 20px; opacity: 0.7; }
+  .back-decree { font-family: serif; font-size: 1.2rem; color: #fff; margin-bottom: 30px; line-height: 1.4; }
+  .back-icon { font-size: 30px; color: var(--main-color); margin-bottom: 15px; }
+
+  /* [ 结果文本区 ] */
+  .result-text-area {
+    margin-top: 25px; text-align: center;
+    opacity: 0; transform: translateY(30px); transition: all 0.8s ease 0.8s;
+    width: 100%;
+  }
+  .oracle-result.active .result-text-area { opacity: 1; transform: translateY(0); }
+
+  /* 律令主标题 - 使用新变量 */
+  .result-decree-main { 
+    font-family: serif; 
+    font-size: var(--decree-size); 
+    line-height: 1.2;
+    margin-bottom: 10px; white-space: nowrap;
+    color: var(--decree-col);
+    text-shadow: 0 0 20px var(--glow-color); 
+  }
+
+  .result-product-name { 
+    font-family: sans-serif; 
+    font-size: var(--name-size); 
+    color: #fff; margin-bottom: 25px; 
+    letter-spacing: 0.25em; text-transform: uppercase; opacity: 0.9;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+  }
+
+</style>
+
+<div class="oracle-sanctuary">
+  
+  <div class="oracle-intro" id="intro-layer">
+    <div class="oracle-title">{{ room_name }}</div>
+    <div class="oracle-subtitle">{{ room_desc }}</div>
+    
+    {% if deck_source.products.size > 0 %}
+      <button class="oracle-btn-base" onclick="startDivination()">{{ section.settings.btn_text }}</button>
+    {% else %}
+      <div style="color: rgba(255,255,255,0.4); margin-top: 20px;">[ The Spirits are Silent ]</div>
+    {% endif %}
+  </div>
+
+  <div class="oracle-result" id="result-layer">
+    
+    <div class="result-card-frame" onclick="this.querySelector('.result-card-inner').classList.toggle('flipped')">
+      <div class="result-card-inner" id="card-inner">
+        <div class="face face-front">
+          <img id="fated-image" src="" alt="Destiny">
+        </div>
+        <div class="face face-back">
+          <div class="card-back-content">
+            <div class="back-icon">✦</div>
+            <div class="energy-code" id="fated-vendor">UNK-000</div>
+            <div class="back-decree" id="fated-decree-back"></div>
+            <div style="font-size: 10px; color: rgba(255,255,255,0.5); letter-spacing: 1px;">TAP TO FLIP</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="result-text-area">
+      <div class="result-decree-main" id="fated-decree-main"></div>
+      <div class="result-product-name" id="fated-name"></div>
+      
+      <a href="#" class="oracle-btn-base" id="fated-link" style="padding: 18px 50px; font-size: 1.1rem;">
+        {{ section.settings.link_text }}
+      </a>
+      
+      <div style="margin-top: 30px;">
+        <button onclick="resetDivination()" style="background:none; border:none; color:rgba(255,255,255,0.4); cursor:pointer; font-size:11px; letter-spacing:2px; padding:10px; transition:0.3s;">DRAW AGAIN</button>
+        <a href="https://auraliasilk.com/pages/lobby" style="display:block; margin-top:5px; color:rgba(255,255,255,0.3); text-decoration:none; font-size:11px; letter-spacing:1px; transition:0.3s;">RETURN TO LOBBY</a>
+      </div>
+    </div>
+    
+  </div>
+
+</div>
+
+<script>
+  var deck = [];
+
+  {% if deck_source != blank %}
+    {% for product in deck_source.products %}
+      {% assign tarot_img = product.metafields.custom.tarot_front_image %}
+      {% assign final_img_src = "" %}
+      {% if tarot_img != blank %}
+          {% assign img_str = tarot_img | append: "" %}
+          {% if img_str contains "http" %} {% assign final_img_src = img_str %}
+          {% else %} {% assign final_img_src = tarot_img | image_url: width: 800 %} {% endif %}
+      {% else %}
+          {% assign final_img_src = product.featured_image | image_url: width: 800 %}
+      {% endif %}
+
+      {% assign verdict = product.metafields.custom.tarot_decree | default: "ENTER THE VOID" | escape %}
+      {% assign vendor_code = product.vendor | default: "UNK-000" | upcase %}
+
+      deck.push({
+        name: "{{ product.title | escape }}",
+        url: "{{ product.url }}",
+        image: "{{ final_img_src }}",
+        decree: "{{ verdict }}",
+        vendor: "{{ vendor_code }}"
+      });
+    {% endfor %}
+  {% endif %}
+
+  function startDivination() {
+    if (deck.length === 0) return;
+    document.getElementById('intro-layer').classList.add('hidden');
+    
+    var fate = deck[Math.floor(Math.random() * deck.length)];
+    
+    document.getElementById('fated-image').src = fate.image || "";
+    document.getElementById('fated-decree-main').innerText = fate.decree;
+    document.getElementById('fated-decree-back').innerText = fate.decree;
+    document.getElementById('fated-name').innerText = fate.name;
+    document.getElementById('fated-vendor').innerText = fate.vendor;
+    document.getElementById('fated-link').href = fate.url;
+
+    var resultLayer = document.getElementById('result-layer');
+    resultLayer.classList.add('active');
+    document.getElementById('card-inner').classList.remove('flipped');
+  }
+
+  function resetDivination() {
+    document.getElementById('card-inner').classList.remove('flipped');
+    document.getElementById('result-layer').classList.remove('active');
+    setTimeout(function() { document.getElementById('fated-image').src = ""; }, 600);
+    setTimeout(function() { document.getElementById('intro-layer').classList.remove('hidden'); }, 800);
+  }
+</script>
