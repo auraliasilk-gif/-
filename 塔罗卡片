@@ -1,0 +1,663 @@
+{% comment %}
+  AURALIA TAROT CARDS - VERSION 9.6 (STABLE)
+  - Name: 🔮 塔罗卡片
+  - Fix: 强制手机端单列，修复电脑端间距塌陷
+  - Feature: 新增“指定产品系列”绑定
+{% endcomment %}
+
+{%- style -%}
+  /* --- [1] 动态参数定义 --- */
+  #shopify-section-{{ section.id }} {
+    /* 时间基准 */
+    --master-beat: {{ section.settings.global_rhythm }}s;
+    
+    /* 模糊开关 (1开 0关) */
+    --blur-switch: {% if section.settings.enable_blur %}1{% else %}0{% endif %};
+    
+    /* 尺寸与布局 */
+    --card-width-pc: {{ section.settings.card_width_pc }}px;
+    --card-height-pc: {{ section.settings.card_height_pc }}px;
+    --card-height-mb: {{ section.settings.card_height_mb }}px;
+    --card-radius: {{ section.settings.card_radius }}px;
+    
+    /* 间距 */
+    --gap-pc: {{ section.settings.grid_gap_pc }}px;
+    --gap-mb: {{ section.settings.grid_gap_mb }}px;
+    
+    /* 物理参数 */
+    --shadow-y: {{ section.settings.shadow_offset_y }}px;
+    --lift-amount: -{{ section.settings.hover_lift_amount }}px; 
+    
+    /* 材质与明暗 */
+    --noise-opacity: {{ section.settings.texture_opacity | divided_by: 100.0 }};
+    --img-brightness: {{ section.settings.image_brightness | divided_by: 100.0 }};
+    
+    /* 颜色 */
+    --base-text-color: {{ section.settings.default_text_color }}; 
+    --void-bg: #050505;
+    
+    /* 光效强度 */
+    --glow-intensity: {{ section.settings.breath_intensity }}px;
+  }
+
+  /* --- [2] 核心动画轨道 --- */
+  @keyframes ambientFloat {
+    0% { transform: scale(1.1) translate(0, 0); }
+    33% { transform: scale(1.15) translate(1.5%, -1%); }
+    66% { transform: scale(1.12) translate(-1%, 1.5%); }
+    100% { transform: scale(1.1) translate(0, 0); }
+  }
+
+  @keyframes randomMist {
+    0%, 45% { filter: brightness(var(--img-brightness)) blur(0px); }
+    50% { filter: brightness(var(--img-brightness)) blur(calc(1.5px * var(--blur-switch))); }
+    55% { filter: brightness(var(--img-brightness)) blur(0px); }
+    80% { filter: brightness(var(--img-brightness)) blur(0px); }
+    85% { filter: brightness(var(--img-brightness)) blur(calc(0.8px * var(--blur-switch))); }
+    90%, 100% { filter: brightness(var(--img-brightness)) blur(0px); }
+  }
+
+  @keyframes hologramBreath {
+    0%, 100% {
+      box-shadow: 0 var(--shadow-y) 30px rgba(0,0,0,0.8), 0 0 0 rgba(0,0,0,0);
+      border-color: rgba(255,255,255,0.05);
+    }
+    50% {
+      box-shadow: 0 var(--shadow-y) 45px rgba(0,0,0,1), 0 0 var(--glow-intensity) var(--active-light);
+      border-color: var(--active-border);
+    }
+  }
+
+  @keyframes voidManifest {
+    0% { opacity: 0; filter: blur(15px); transform: translateY(60px) scale(0.94); }
+    100% { opacity: 1; filter: blur(0); transform: translateY(0) scale(1); }
+  }
+
+  /* --- [3] 布局容器修复 --- */
+  .tarot-hologram-wrapper {
+    width: 100%;
+    max-width: {{ section.settings.max_width }}px;
+    margin: 0 auto;
+    /* 保持上下极窄边距 */
+    padding: 20px 0; 
+    overflow: visible; /* 允许3D卡片悬浮溢出 */
+  }
+
+  .tarot-section-header {
+    text-align: center;
+    margin-bottom: 35px;
+    color: var(--base-text-color);
+    text-transform: uppercase;
+    letter-spacing: 0.3em;
+    font-size: 12px;
+    opacity: 0.8;
+    animation: voidManifest 1.5s cubic-bezier(0.19, 1, 0.22, 1) forwards;
+  }
+
+  /* [关键修复] 网格系统重构 
+     使用 display: flex 但在移动端强制 column
+  */
+  .tarot-grid {
+    display: flex;
+    flex-wrap: wrap; /* 允许换行 */
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    
+    /* 电脑端间距 */
+    gap: var(--gap-pc); 
+    padding: 0 20px;
+    box-sizing: border-box;
+  }
+
+  /* [ 场景容器 ] */
+  .tarot-scene {
+    position: relative;
+    z-index: 1;
+    perspective: 1500px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    
+    /* 初始不可见，由动画显现 */
+    opacity: 0; 
+    animation: voidManifest 1.4s cubic-bezier(0.19, 1, 0.22, 1) forwards;
+    animation-delay: var(--entry-delay);
+  }
+
+  /* --- [4] 响应式刚性控制 --- */
+  
+  /* PC端: 刚性宽度 */
+  @media screen and (min-width: 768px) {
+    .tarot-scene {
+      /* flex-grow: 0, flex-shrink: 0, flex-basis: width */
+      flex: 0 0 var(--card-width-pc); 
+      width: var(--card-width-pc);
+      height: var(--card-height-pc);
+    }
+  }
+
+  /* 移动端: 强制单列，防止变为两条 */
+  @media screen and (max-width: 767px) {
+    .tarot-grid {
+      /* 强制纵向排列，杜绝并排 */
+      flex-direction: column; 
+      gap: var(--gap-mb);
+      padding: 0; /* 移动端靠 Margin 控制宽度 */
+    }
+
+    .tarot-scene {
+      /* 宽度控制：屏幕宽度 - 左右边距 */
+      width: calc(100% - ({{ section.settings.side_padding_mb }}px * 2));
+      max-width: 400px; /* 防止在Pad上过大 */
+      height: var(--card-height-mb);
+      margin: 0 auto; /* 居中 */
+    }
+  }
+
+  /* --- [5] 卡片物理层 --- */
+  .tarot-card {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    transform-style: preserve-3d;
+    border-radius: var(--card-radius);
+    transition: transform 1.4s cubic-bezier(0.19, 1, 0.22, 1);
+    will-change: transform;
+  }
+  
+  .tarot-card.is-flipped {
+    transform: rotateY(180deg);
+  }
+
+  /* [ 通用面 ] */
+  .card-face {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    border-radius: var(--card-radius);
+    overflow: hidden;
+    background-color: var(--void-bg);
+    
+    box-shadow: 0 var(--shadow-y) 30px rgba(0,0,0,0.8), 0 0 0 0 rgba(0,0,0,0);
+    border: 1px solid rgba(255,255,255,0.05);
+    
+    transition: box-shadow 1s ease, border-color 1s ease;
+  }
+
+  /* 光效应用 */
+  .tarot-hologram-wrapper.breathing-active .card-face {
+    animation: hologramBreath var(--master-beat) ease-in-out infinite;
+    animation-delay: var(--random-phase-1);
+  }
+
+  /* 物理悬浮 (仅支持Hover的设备) */
+  @media (hover: hover) {
+    .tarot-scene:hover .tarot-card:not(.is-flipped) {
+      transform: translateY(var(--lift-amount)) scale(1.02);
+    }
+    .tarot-scene:hover .tarot-card.is-flipped {
+      transform: rotateY(180deg) translateY(var(--lift-amount)) scale(1.02);
+    }
+  }
+
+  /* [ 材质层 ] */
+  .card-face::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='1'/%3E%3C/svg%3E");
+    mix-blend-mode: overlay;
+    opacity: var(--noise-opacity);
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  /* [ 正面 ] */
+  .card-face-front { transform: rotateY(0deg); }
+  
+  .card-face-front img {
+    width: 100%; height: 100%; object-fit: cover; display: block;
+    transform: scale(1.1); 
+    filter: brightness(var(--img-brightness));
+    
+    {% if section.settings.enable_pan %}
+      animation: 
+        ambientFloat var(--master-beat) ease-in-out infinite alternate,
+        randomMist calc(var(--master-beat) * 0.6) linear infinite;
+      animation-delay: var(--random-phase-1), var(--random-phase-2);
+    {% endif %}
+    
+    transition: filter 0.5s ease;
+  }
+
+  /* [ 背面 ] */
+  .card-face-back {
+    transform: rotateY(180deg);
+    display: flex; flex-direction: column;
+    justify-content: center; align-items: center;
+    padding: 30px; text-align: center;
+    border: 1px solid var(--active-border); 
+    background-color: #020202; 
+  }
+
+  .card-face-back::before {
+    content: ''; position: absolute;
+    top: 10px; bottom: 10px; left: 10px; right: 10px;
+    border: 1px solid var(--active-text-color); opacity: 0.15;
+    border-radius: calc(var(--card-radius) - 2px); 
+    pointer-events: none;
+  }
+
+  .energy-code {
+    font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--active-text-color); opacity: 0.6; margin-bottom: 20px;
+    font-family: monospace; z-index: 5;
+    transform: translateZ(1px);
+  }
+
+  .oracle-text {
+    font-family: var(--font-heading-family); font-size: 15px;
+    line-height: 1.7; letter-spacing: 0.05em; margin-bottom: 30px;
+    min-height: 80px; display: flex; align-items: center; justify-content: center;
+    opacity: 0; transition: opacity 0.8s ease;
+    color: var(--active-text-color);
+    text-shadow: 0 0 10px var(--active-light);
+    transform: translateZ(1px);
+  }
+  .oracle-text.visible { opacity: 1; }
+
+  .decree-btn {
+    position: relative; display: inline-block; font-size: 11px;
+    text-transform: uppercase; letter-spacing: 2px; text-decoration: none;
+    padding: 12px 24px; background: transparent;
+    border: 1px solid var(--active-text-color); color: var(--active-text-color);
+    transition: all 0.5s ease; cursor: pointer; z-index: 10; pointer-events: auto; 
+    transform: translateZ(20px); /* 按钮轻微浮起 */
+  }
+  .decree-btn:hover {
+    background: var(--active-text-color); color: #000; box-shadow: 0 0 20px var(--active-text-color);
+  }
+{%- endstyle -%}
+
+<div class="tarot-hologram-wrapper {% if section.settings.enable_breathing %}breathing-active{% endif %}">
+  
+  {% if section.settings.title != blank %}
+    <div class="tarot-section-header">{{ section.settings.title }}</div>
+  {% endif %}
+
+  <div class="tarot-grid">
+
+    {% comment %} === 核心数据源逻辑重构 === {% endcomment %}
+    {% assign use_blocks = false %}
+    {% assign tarot_items = blank %}
+
+    {% if section.settings.source_mode == 'specific_collection' %}
+        {% comment %} 模式A: 指定系列 {% endcomment %}
+        {% assign target_collection = section.settings.source_collection %}
+        {% if target_collection != blank %}
+            {% assign tarot_items = target_collection.products | limit: section.settings.collection_limit %}
+        {% else %}
+            <p style="color:#666;text-align:center;width:100%;">[炼金术士提示] 请在右侧选择一个产品系列。</p>
+        {% endif %}
+
+    {% elsif section.settings.source_mode == 'auto' %}
+        {% comment %} 模式B: 自动探测 {% endcomment %}
+        {% if request.page_type == 'product' %}
+            {% assign tarot_items = recommendations.products | default: collections.all.products | limit: 4 %} 
+        {% elsif request.page_type == 'collection' %}
+            {% assign tarot_items = collection.products | limit: section.settings.collection_limit %}
+        {% else %}
+            {% assign use_blocks = true %}
+        {% endif %}
+
+    {% else %}
+        {% comment %} 模式C: 手动块 {% endcomment %}
+        {% assign use_blocks = true %}
+    {% endif %}
+
+    {% assign render_list = blank %}
+    {% if use_blocks %} {% assign render_list = section.blocks %} {% else %} {% assign render_list = tarot_items %} {% endif %}
+
+    {% for item in render_list %}
+      {% if use_blocks %} {% assign p = item.settings.target_product %} {% else %} {% assign p = item %} {% endif %}
+      
+      {% if p != blank %}
+        {% assign raw_meta_img = p.metafields.custom.tarot_front_image %}
+        {% assign final_img_src = blank %}
+        {% if raw_meta_img != blank %}
+           {% assign meta_str = raw_meta_img | append: "" %}
+           {% if meta_str contains 'http' %} {% assign final_img_src = meta_str %}
+           {% else %} {% assign final_img_src = raw_meta_img | image_url: width: 600 %} {% endif %}
+        {% else %}
+           {% assign final_img_src = p.featured_image | image_url: width: 600 %}
+        {% endif %}
+
+        {% assign t_verdict = p.metafields.custom.tarot_verdict | newline_to_br | strip_newlines | replace: '<br />', '|||' | escape %}
+        {% assign t_decree = p.metafields.custom.tarot_decree | default: "ENTER THE VOID" %}
+        {% assign t_vendor = p.vendor | default: "UNK-000" %}
+
+        {% comment %} 颜色变量计算 {% endcomment %}
+        {% assign source_color = section.settings.default_text_color %}
+        {% if section.settings.use_soul_color_mode %}
+              {% assign meta_color = p.metafields.custom.soul_color %}
+              {% if meta_color != blank %}
+                {% assign source_color = meta_color %}
+              {% endif %}
+        {% endif %}
+
+        {% assign active_text_color = source_color %}
+        {% assign active_border = source_color | color_modify: 'alpha', 0.5 %}
+        {% assign active_light = source_color | color_modify: 'alpha', 0.8 %}
+        
+        {% assign salt = forloop.index | times: 19 %}
+        {% assign seed = "now" | date: "%S" | plus: salt %}
+        {% assign random_phase_1 = seed | modulo: 20 | times: -1.3 %}
+        {% assign random_phase_2 = seed | times: 3 | modulo: 15 | times: -1.1 %}
+        {% assign entry_delay = forloop.index0 | times: 0.1 %}
+
+        <div class="tarot-scene" 
+             data-verdict="{{ t_verdict }}"
+             style="--active-text-color: {{ active_text_color }};
+                    --active-border: {{ active_border }};
+                    --active-light: {{ active_light }}; 
+                    --entry-delay: {{ entry_delay }}s;
+                    --random-phase-1: {{ random_phase_1 }}s;
+                    --random-phase-2: {{ random_phase_2 }}s;">
+          <div class="tarot-card">
+            <div class="card-face card-face-front">
+              {% if final_img_src != blank %}
+                <img src="{{ final_img_src }}" alt="{{ p.title }}" loading="lazy">
+              {% else %}
+                 <div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:#555;background:#111;">VOID</div>
+              {% endif %}
+            </div>
+            <div class="card-face card-face-back">
+              <div class="energy-code">{{ t_vendor }}</div>
+              <div class="oracle-text">...</div>
+              <a href="{{ p.url }}" class="decree-btn">{{ t_decree }}</a>
+            </div>
+          </div>
+        </div>
+      {% endif %}
+    {% endfor %}
+  </div>
+</div>
+
+<script>
+  (function() {
+    function initTarotCards(scope) {
+      const scenes = scope.querySelectorAll('.tarot-scene');
+      scenes.forEach(scene => {
+        if(scene.dataset.init === "true") return;
+        scene.dataset.init = "true";
+        const card = scene.querySelector('.tarot-card');
+        const oracleBox = scene.querySelector('.oracle-text');
+        const rawVerdict = scene.dataset.verdict;
+        let fateDeck = [];
+        if (rawVerdict) {
+          try {
+            const decodedVerdict = new DOMParser().parseFromString(rawVerdict, "text/html").documentElement.textContent;
+            fateDeck = decodedVerdict.split('|||').filter(line => line.trim() !== '');
+          } catch (e) { console.warn("Oracle decode failed", e); }
+        }
+        if (fateDeck.length === 0) fateDeck = ["The Void Stares Back.", "Silence is the Answer."];
+        let isFlipped = false;
+        scene.addEventListener('click', function(e) {
+          if(e.target.closest('.decree-btn')) { e.stopPropagation(); return; }
+          if (!isFlipped) {
+            const randomLine = fateDeck[Math.floor(Math.random() * fateDeck.length)];
+            oracleBox.innerHTML = randomLine;
+            card.classList.add('is-flipped');
+            setTimeout(() => { oracleBox.classList.add('visible'); }, 500); 
+            isFlipped = true;
+          } else {
+            card.classList.remove('is-flipped');
+            oracleBox.classList.remove('visible');
+            isFlipped = false;
+          }
+        });
+      });
+    }
+    document.addEventListener('DOMContentLoaded', () => initTarotCards(document));
+    document.addEventListener('shopify:section:load', function(e) {
+      if(e.target.querySelector('.tarot-hologram-wrapper')) initTarotCards(e.target);
+    });
+  })();
+</script>
+
+{% schema %}
+{
+  "name": "🔮 塔罗卡片 (Tarot Cards)",
+  "settings": [
+    {
+      "type": "header",
+      "content": "📡 数据源控制"
+    },
+    {
+      "type": "select",
+      "id": "source_mode",
+      "label": "数据源模式",
+      "options": [
+        { "value": "auto", "label": "自动探测 (Auto)" },
+        { "value": "specific_collection", "label": "指定系列 (Specific Collection)" },
+        { "value": "manual", "label": "仅手动块 (Manual Blocks)" }
+      ],
+      "default": "auto",
+      "info": "选择'指定系列'后，请在下方选择一个产品系列。"
+    },
+    {
+      "type": "collection",
+      "id": "source_collection",
+      "label": "选择产品系列 (当模式为指定系列时生效)"
+    },
+    {
+      "type": "range",
+      "id": "collection_limit",
+      "min": 4,
+      "max": 48,
+      "step": 4,
+      "label": "显化数量上限",
+      "default": 12
+    },
+    {
+      "type": "header",
+      "content": "⏳ 时间与动态"
+    },
+    {
+      "type": "range",
+      "id": "global_rhythm",
+      "min": 10,
+      "max": 50,
+      "step": 2,
+      "unit": "s",
+      "label": "环境微动周期",
+      "default": 30
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_breathing",
+      "label": "✅ 开启呼吸光效",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_pan",
+      "label": "✅ 开启自然微动+迷雾",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_blur",
+      "label": "✅ 开启独立随机迷雾",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "🌌 颜色与材质"
+    },
+    {
+      "type": "checkbox",
+      "id": "use_soul_color_mode",
+      "label": "✅ 开启“灵魂色”统管",
+      "default": true
+    },
+    {
+      "type": "color",
+      "id": "default_text_color",
+      "label": "默认主题色",
+      "default": "#D4AF37"
+    },
+    {
+      "type": "range",
+      "id": "image_brightness",
+      "min": 20,
+      "max": 100,
+      "step": 5,
+      "default": 85,
+      "label": "卡面图像亮度"
+    },
+    {
+      "type": "range",
+      "id": "texture_opacity",
+      "min": 0,
+      "max": 100,
+      "step": 5,
+      "default": 40,
+      "label": "暗纹噪点强度"
+    },
+    {
+      "type": "range",
+      "id": "breath_intensity",
+      "min": 10,
+      "max": 60,
+      "step": 5,
+      "default": 35,
+      "label": "呼吸光晕半径"
+    },
+    {
+      "type": "range",
+      "id": "hover_lift_amount",
+      "min": 0,
+      "max": 60,
+      "step": 5,
+      "default": 25,
+      "label": "悬浮抬升幅度"
+    },
+    {
+      "type": "header",
+      "content": "📐 间距与尺寸"
+    },
+    {
+      "type": "range",
+      "id": "grid_gap_pc",
+      "min": 10,
+      "max": 100,
+      "step": 5,
+      "label": "卡片间距 (PC)",
+      "default": 40
+    },
+    {
+      "type": "range",
+      "id": "grid_gap_mb",
+      "min": 10,
+      "max": 60,
+      "step": 2,
+      "label": "卡片间距 (Mobile)",
+      "default": 24
+    },
+    {
+      "type": "range",
+      "id": "card_width_pc",
+      "min": 200,
+      "max": 600,
+      "step": 10,
+      "label": "卡片宽度 (PC)",
+      "default": 300
+    },
+    {
+      "type": "range",
+      "id": "card_height_pc",
+      "min": 300,
+      "max": 800,
+      "step": 10,
+      "label": "卡片高度 (PC)",
+      "default": 480
+    },
+    {
+      "type": "range",
+      "id": "card_height_mb",
+      "min": 200,
+      "max": 600,
+      "step": 10,
+      "label": "卡片高度 (Mobile)",
+      "default": 400
+    },
+    {
+      "type": "range",
+      "id": "side_padding_mb",
+      "min": 0,
+      "max": 100,
+      "step": 5,
+      "label": "移动端左右缩进",
+      "default": 40
+    },
+    {
+      "type": "header",
+      "content": "⚙️ 基础设置"
+    },
+    {
+      "type": "text",
+      "id": "title",
+      "label": "版块标题",
+      "default": "ORACLE OF THE VOID"
+    },
+    {
+      "type": "range",
+      "id": "card_radius",
+      "min": 0,
+      "max": 40,
+      "step": 1,
+      "label": "圆角",
+      "default": 12
+    },
+    {
+      "type": "range",
+      "id": "shadow_offset_y",
+      "min": 0,
+      "max": 50,
+      "step": 1,
+      "label": "阴影垂直偏移",
+      "default": 15
+    },
+    {
+      "type": "range",
+      "id": "max_width",
+      "min": 800,
+      "max": 1800,
+      "step": 50,
+      "label": "最大容器宽度",
+      "default": 1400
+    }
+  ],
+  "blocks": [
+    {
+      "type": "tarot_card",
+      "name": "手动法器卡片",
+      "settings": [
+        {
+          "type": "product",
+          "id": "target_product",
+          "label": "绑定法器产品"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "🔮 塔罗卡片 (Tarot Cards)"
+    }
+  ]
+}
+{% endschema %}
