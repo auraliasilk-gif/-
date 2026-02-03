@@ -1,0 +1,374 @@
+{% comment %}
+  Auraliasilk 5.1 - The Rift Gate (Yin & Yang Dynamics)
+  Concept: Spirit (Video) vs. Matter (Video).
+  Interaction: Ebb and Flow with Blur/Grayscale recession.
+{% endcomment %}
+
+{%- style -%}
+  #shopify-section-{{ section.id }} {
+    --gate-height-pc: {{ section.settings.section_height_pc }}vh;
+    --gate-height-mb: {{ section.settings.section_height_mb }}vh;
+    --base-gold: #D4AF37;
+    --void-bg: #050505;
+    /* 极度优雅的“重门”惯性，模拟液压或太极推手的阻尼感 */
+    --transition-curve: cubic-bezier(0.22, 1, 0.36, 1); 
+    --overlay-color: #000000;
+  }
+
+  .rift-wrapper {
+    display: flex;
+    width: 100%;
+    height: var(--gate-height-pc);
+    position: relative;
+    overflow: hidden;
+    background-color: var(--void-bg);
+  }
+
+  /* --- [ 核心面板：气韵流动 ] --- */
+  .rift-panel {
+    position: relative;
+    flex: 1; /* 默认 50% */
+    height: 100%;
+    overflow: hidden;
+    transition: all 1.2s var(--transition-curve); /* 延长时间以增加沉浸感 */
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    /* 默认状态：轻微压暗 */
+    filter: brightness(0.9);
+  }
+
+  /* --- [ 交互逻辑：阴阳消长 ] --- */
+  @media (hover: hover) {
+    /* 1. 当鼠标进入容器：整体进入“待定”状态 */
+    .rift-wrapper:hover .rift-panel {
+      filter: brightness(0.4) grayscale(1) blur(6px); /* 闲置方：黑白、模糊、晦暗 */
+      flex: 0.8; /* 闲置方收缩 */
+    }
+    
+    /* 2. 当鼠标聚焦特定面板：激活“显化”状态 */
+    .rift-wrapper .rift-panel:hover {
+      flex: 3; /* 扩张至 75% 左右，更有张力 */
+      filter: brightness(1.05) grayscale(0) blur(0px); /* 激活方：全彩、清晰、高亮 */
+      z-index: 5;
+      box-shadow: 0 0 50px rgba(0,0,0,0.8); /* 增加层级深度感 */
+    }
+  }
+
+  /* --- [ 媒体层：视频与图片 ] --- */
+  .rift-media-container {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    z-index: 0;
+  }
+  
+  .rift-media-container img,
+  .rift-media-container video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 1.5s var(--transition-curve);
+    will-change: transform;
+  }
+
+  /* 悬停时的视差推进感 */
+  .rift-panel:hover .rift-media-container img,
+  .rift-panel:hover .rift-media-container video {
+    transform: scale(1.1);
+  }
+
+  /* --- [ 遮罩与材质 ] --- */
+  .rift-overlay {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: radial-gradient(circle at center, transparent 0%, var(--overlay-color) 90%);
+    opacity: {{ section.settings.overlay_opacity | divided_by: 100.0 }};
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  /* 噪点纹理：统一视觉质感，消除视频数码味 */
+  .rift-panel::after {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.5'/%3E%3C/svg%3E");
+    opacity: 0.15;
+    pointer-events: none;
+    z-index: 2;
+    mix-blend-mode: overlay;
+  }
+
+  /* --- [ 金线：呼吸的边界 ] --- */
+  .rift-divider {
+    position: absolute;
+    left: 50%;
+    top: 10%; bottom: 10%; /* 不顶天立地，更像悬浮的能量束 */
+    width: 1px;
+    background: linear-gradient(to bottom, transparent, var(--base-gold), transparent);
+    z-index: 10;
+    pointer-events: none;
+    transition: left 1.2s var(--transition-curve), opacity 0.5s ease;
+    box-shadow: 0 0 8px var(--base-gold);
+    animation: gold-pulse 4s infinite ease-in-out;
+  }
+
+  @keyframes gold-pulse {
+    0%, 100% { opacity: 0.4; box-shadow: 0 0 5px var(--base-gold); }
+    50% { opacity: 0.8; box-shadow: 0 0 15px var(--base-gold); }
+  }
+
+  /* 悬停交互时，金线随动逻辑由 flex 布局自然驱动，
+     但在视觉上我们让它淡化，仿佛因为两界融合而消失 */
+  .rift-wrapper:hover .rift-divider {
+    opacity: 0; 
+    transition-duration: 0.3s;
+  }
+
+  /* --- [ 内容排版 ] --- */
+  .rift-content {
+    position: relative;
+    z-index: 3;
+    text-align: center;
+    color: #fff;
+    padding: 40px;
+    max-width: 500px;
+    /* 初始状态：文字清晰 */
+    opacity: 1;
+    transform: translateY(0);
+    transition: all 0.8s var(--transition-curve);
+  }
+
+  /* 未被悬停时，文字随面板一起模糊/消隐 */
+  .rift-wrapper:hover .rift-panel:not(:hover) .rift-content {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  
+  /* 被悬停时，文字上浮显现 */
+  .rift-panel:hover .rift-content {
+    transform: translateY(-10px);
+  }
+
+  .rift-subtitle {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5em;
+    color: var(--base-gold);
+    margin-bottom: 20px;
+    display: block;
+    opacity: 0.9;
+  }
+
+  .rift-title {
+    font-family: var(--font-heading-family);
+    font-size: clamp(32px, 5vw, 60px);
+    font-weight: 300; /* 更轻盈的字体 */
+    line-height: 1.1;
+    letter-spacing: 0.02em;
+    margin-bottom: 40px;
+    text-shadow: 0 10px 30px rgba(0,0,0,0.9);
+  }
+
+  /* 按钮：极简线条 */
+  .rift-btn {
+    display: inline-block;
+    padding: 14px 36px;
+    border: 1px solid rgba(255,255,255,0.2);
+    color: #fff;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.25em;
+    transition: all 0.5s ease;
+    background: rgba(0,0,0,0.3);
+    backdrop-filter: blur(4px);
+  }
+
+  .rift-panel:hover .rift-btn {
+    border-color: var(--base-gold);
+    color: var(--base-gold);
+    background: rgba(0,0,0,0.6);
+    box-shadow: 0 0 25px rgba(212, 175, 55, 0.2);
+  }
+
+  /* --- [ 移动端适配 ] --- */
+  @media screen and (max-width: 768px) {
+    .rift-wrapper { flex-direction: column; height: var(--gate-height-mb); }
+    .rift-panel { width: 100%; flex: 1 !important; filter: none !important; }
+    .rift-divider { width: 80%; height: 1px; left: 10%; top: 50%; bottom: auto; }
+    
+    /* 移动端保留点击反馈，但不做剧烈的模糊交互 */
+    .rift-content { opacity: 1 !important; transform: none !important; }
+    .rift-title { font-size: 32px; }
+  }
+{%- endstyle -%}
+
+<div class="rift-wrapper">
+  
+  <div class="rift-divider"></div>
+
+  {% comment %} === LEFT GATE (SPIRIT / YIN) === {% endcomment %}
+  <a href="{{ section.settings.link_1 }}" class="rift-panel panel-left">
+    <div class="rift-media-container">
+      {% comment %} 优先显示视频 {% endcomment %}
+      {% if section.settings.video_1 != blank %}
+        {{ section.settings.video_1 | video_tag: autoplay: true, loop: true, muted: true, playsinline: true, controls: false, image_size: '1200x' }}
+      {% elsif section.settings.image_1 != blank %}
+        {{ section.settings.image_1 | image_url: width: 1600 | image_tag: loading: 'lazy', alt: section.settings.title_1 }}
+      {% else %}
+        <div style="width:100%;height:100%;background:#0a0a0a;"></div>
+      {% endif %}
+    </div>
+    <div class="rift-overlay"></div>
+    
+    <div class="rift-content">
+      <span class="rift-subtitle">{{ section.settings.subtitle_1 }}</span>
+      <h2 class="rift-title">{{ section.settings.title_1 }}</h2>
+      <span class="rift-btn">{{ section.settings.btn_1 }}</span>
+    </div>
+  </a>
+
+  {% comment %} === RIGHT GATE (MATTER / YANG) === {% endcomment %}
+  <a href="{{ section.settings.link_2 }}" class="rift-panel panel-right">
+    <div class="rift-media-container">
+      {% if section.settings.video_2 != blank %}
+        {{ section.settings.video_2 | video_tag: autoplay: true, loop: true, muted: true, playsinline: true, controls: false, image_size: '1200x' }}
+      {% elsif section.settings.image_2 != blank %}
+        {{ section.settings.image_2 | image_url: width: 1600 | image_tag: loading: 'lazy', alt: section.settings.title_2 }}
+      {% else %}
+        <div style="width:100%;height:100%;background:#111;"></div>
+      {% endif %}
+    </div>
+    <div class="rift-overlay"></div>
+    
+    <div class="rift-content">
+      <span class="rift-subtitle">{{ section.settings.subtitle_2 }}</span>
+      <h2 class="rift-title">{{ section.settings.title_2 }}</h2>
+      <span class="rift-btn">{{ section.settings.btn_2 }}</span>
+    </div>
+  </a>
+
+</div>
+
+{% schema %}
+{
+  "name": "⛩️ Rift Gate (Dynamic)",
+  "settings": [
+    {
+      "type": "header",
+      "content": "📐 Layout"
+    },
+    {
+      "type": "range",
+      "id": "section_height_pc",
+      "min": 50,
+      "max": 100,
+      "step": 5,
+      "unit": "vh",
+      "label": "Desktop Height",
+      "default": 95
+    },
+    {
+      "type": "range",
+      "id": "section_height_mb",
+      "min": 60,
+      "max": 100,
+      "step": 5,
+      "unit": "vh",
+      "label": "Mobile Height",
+      "default": 80
+    },
+    {
+      "type": "range",
+      "id": "overlay_opacity",
+      "min": 0,
+      "max": 90,
+      "step": 10,
+      "unit": "%",
+      "label": "Vignette Darkening",
+      "default": 30
+    },
+    {
+      "type": "header",
+      "content": "🌑 Left Gate (Spirit/Yin)"
+    },
+    {
+      "type": "video",
+      "id": "video_1",
+      "label": "Background Video (Micro-motion)"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_1",
+      "label": "Fallback Image"
+    },
+    {
+      "type": "text",
+      "id": "subtitle_1",
+      "label": "Subtitle",
+      "default": "THE VOID"
+    },
+    {
+      "type": "text",
+      "id": "title_1",
+      "label": "Heading",
+      "default": "Spirit"
+    },
+    {
+      "type": "text",
+      "id": "btn_1",
+      "label": "Button",
+      "default": "ENTER"
+    },
+    {
+      "type": "url",
+      "id": "link_1",
+      "label": "Link"
+    },
+    {
+      "type": "header",
+      "content": "🌕 Right Gate (Matter/Yang)"
+    },
+    {
+      "type": "video",
+      "id": "video_2",
+      "label": "Background Video (Light/Texture)"
+    },
+    {
+      "type": "image_picker",
+      "id": "image_2",
+      "label": "Fallback Image"
+    },
+    {
+      "type": "text",
+      "id": "subtitle_2",
+      "label": "Subtitle",
+      "default": "THE FORM"
+    },
+    {
+      "type": "text",
+      "id": "title_2",
+      "label": "Heading",
+      "default": "Matter"
+    },
+    {
+      "type": "text",
+      "id": "btn_2",
+      "label": "Button",
+      "default": "EXPLORE"
+    },
+    {
+      "type": "url",
+      "id": "link_2",
+      "label": "Link"
+    }
+  ],
+  "presets": [
+    {
+      "name": "⛩️ Rift Gate (Dynamic)"
+    }
+  ]
+}
+{% endschema %}
