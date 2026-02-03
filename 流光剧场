@@ -1,0 +1,556 @@
+{% comment %}
+  AURALIA TAROT THEATER
+  Version: 10.0 (Geometry Rubbing, Absolute Roman Arch)
+  Author: The Code Alchemist
+{% endcomment %}
+
+{%- assign card_bg_color = '#050505' -%}
+{%- assign text_color = '#D4AF37' -%}
+{%- assign cycle_duration = section.settings.cycle_duration | default: 12 -%}
+
+<style>
+  /* 全局变量定义 */
+  #shopify-section-{{ section.id }} {
+    --tarot-duration: {{ cycle_duration }}s;
+    --tarot-radius-bottom: {{ section.settings.corner_radius }}px; 
+    --tarot-gap-desktop: {{ section.settings.gap_desktop }}px;
+    --tarot-blur-strength: 8px;
+    
+    /* 电脑端几何：基准宽度 */
+    --desktop-card-width: {{ section.settings.desktop_card_width }}px;
+    /* 电脑端核心公式：半径 = 宽度的一半 (绝对半圆) */
+    --desktop-arch-radius: calc(var(--desktop-card-width) / 2);
+
+    /* 手机端混沌范围 */
+    --mobile-width-min: {{ section.settings.mobile_width_min }}%;
+    --mobile-width-max: {{ section.settings.mobile_width_max }}%;
+    
+    /* 质感控制 */
+    --film-noise-opacity: {{ section.settings.noise_intensity | divided_by: 100.0 }};
+    --card-shadow-opacity: {{ section.settings.shadow_intensity | divided_by: 100.0 }};
+    
+    /* 灵魂滤镜 */
+    --filter-opacity: {{ section.settings.filter_opacity | divided_by: 100.0 }};
+    --filter-tone: {{ section.settings.filter_tone }};
+  }
+
+  /* 容器：黑色虚空 */
+  .tarot-section-container {
+    background-color: {{ card_bg_color }};
+    padding: 6rem 1rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* 环境底噪 */
+  .tarot-bg-noise {
+    position: absolute;
+    inset: 0;
+    opacity: 0.05;
+    pointer-events: none;
+    z-index: 1;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  }
+
+  /* 灵魂滤镜 */
+  .soul-filter-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+    opacity: var(--filter-opacity);
+    background: radial-gradient(circle at 50% 30%, var(--filter-tone), transparent 80%);
+    mix-blend-mode: screen; 
+  }
+
+  /* -----------------------
+     布局网格
+     ----------------------- */
+  .tarot-grid {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--tarot-gap-desktop);
+    max-width: 1400px;
+    margin: 0 auto;
+    position: relative;
+    z-index: 3; 
+  }
+
+  /* -----------------------
+     卡片形态：绝对几何 (Absolute Geometry)
+     ----------------------- */
+  .tarot-card {
+    position: relative;
+    aspect-ratio: 2 / 3;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1), border-color 0.8s ease, box-shadow 0.8s ease;
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    box-shadow: 0 10px 30px rgba(0,0,0, var(--card-shadow-opacity));
+  }
+
+  /* >>> 电脑端 (Desktop) <<< */
+  @media (min-width: 769px) {
+    .tarot-card {
+      flex: 0 0 var(--desktop-card-width); 
+      /* 完美拓印：顶部圆角严格等于宽度的一半 */
+      {% if section.settings.enable_arch %}
+        border-radius: var(--desktop-arch-radius) var(--desktop-arch-radius) var(--tarot-radius-bottom) var(--tarot-radius-bottom);
+      {% else %}
+        border-radius: var(--tarot-radius-bottom);
+      {% endif %}
+    }
+  }
+
+  /* >>> 手机端 (Mobile - The Rubbing) <<< */
+  @media (max-width: 768px) {
+    .tarot-section-container {
+       padding: 4rem 1rem; /* 容器左右有 1rem 的留白 */
+    }
+    .tarot-grid {
+      display: flex;
+      flex-direction: column; 
+      align-items: flex-start;
+      gap: 3.5rem; 
+      width: 100%;
+    }
+    
+    .tarot-card {
+      flex: none; 
+      
+      /* 核心修复：利用 CSS 变量动态计算圆角。
+         在下方的 nth-child 逻辑中，我们不仅设置宽度，
+         还设置了对应的 --mobile-arch-radius (基于 vw 计算)。
+      */
+      {% if section.settings.enable_arch %}
+        border-radius: var(--mobile-arch-radius) var(--mobile-arch-radius) var(--tarot-radius-bottom) var(--tarot-radius-bottom);
+      {% else %}
+        border-radius: var(--tarot-radius-bottom);
+      {% endif %}
+    }
+
+    /* 混沌算法与几何拓印的结合：
+       我们假设屏幕宽度 = 100vw。容器 padding 约 2rem。
+       因此 radius ≈ (width_percent * 1vw) / 2
+       这里做微调以适配真实视觉。
+    */
+
+    /* 1. 向左靠 (Min Width) */
+    .tarot-grid .tarot-card:nth-child(4n+1) {
+      width: var(--mobile-width-min);
+      /* 计算半径：(Min% / 2) vw */
+      --mobile-arch-radius: calc(var(--mobile-width-min) * 0.5vw - 0.5rem);
+      margin-right: auto; margin-left: 0;
+    }
+    
+    /* 2. 向右靠 (Max Width) */
+    .tarot-grid .tarot-card:nth-child(4n+2) {
+      width: var(--mobile-width-max);
+      /* 计算半径：(Max% / 2) vw */
+      --mobile-arch-radius: calc(var(--mobile-width-max) * 0.5vw - 0.5rem);
+      margin-left: auto; margin-right: 0;
+    }
+    
+    /* 3. 居中 (Average) */
+    .tarot-grid .tarot-card:nth-child(4n+3) {
+      --avg-width: calc((var(--mobile-width-min) + var(--mobile-width-max)) / 2);
+      width: var(--avg-width);
+      /* 计算半径 */
+      --mobile-arch-radius: calc(((var(--mobile-width-min) + var(--mobile-width-max)) / 2) * 0.5vw - 0.5rem);
+      margin-left: auto; margin-right: auto; 
+    }
+    
+    /* 4. 偏右 (Max - 5%) */
+    .tarot-grid .tarot-card:nth-child(4n+4) {
+      --sub-max-width: calc(var(--mobile-width-max) - 5%);
+      width: var(--sub-max-width);
+      /* 计算半径 */
+      --mobile-arch-radius: calc((var(--mobile-width-max) - 5) * 0.5vw - 0.5rem);
+      margin-left: auto; margin-right: 5%; 
+    }
+  }
+
+  /* -----------------------
+     古典窗棂 (Classical Frame)
+     ----------------------- */
+  {% if section.settings.enable_classical_border %}
+  .tarot-card.classical-mode {
+    border: 1px solid rgba(212, 175, 55, 0.4); 
+    /* 内嵌阴影层级 */
+    box-shadow: 
+      inset 0 0 0 3px #050505, 
+      inset 0 0 0 4px rgba(212, 175, 55, 0.7), 
+      inset 0 0 40px rgba(0,0,0, 0.8),
+      0 10px 30px rgba(0,0,0, var(--card-shadow-opacity));
+  }
+  .tarot-card.classical-mode:hover {
+    border-color: rgba(212, 175, 55, 1);
+    transform: translateY(-8px);
+    z-index: 10;
+    box-shadow: 
+      inset 0 0 0 3px #050505, 
+      inset 0 0 0 4px #D4AF37, 
+      inset 0 0 50px rgba(0,0,0, 1),
+      0 0 40px rgba(212, 175, 55, 0.3);
+  }
+  {% else %}
+  .tarot-card:hover {
+    border-color: rgba(212, 175, 55, 1);
+    box-shadow: 0 0 40px rgba(212, 175, 55, 0.25); 
+    transform: translateY(-8px);
+    z-index: 10;
+  }
+  {% endif %}
+
+  /* 胶片颗粒层 */
+  .tarot-card::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 5;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+    opacity: var(--film-noise-opacity);
+    mix-blend-mode: overlay;
+    border-radius: inherit; 
+  }
+
+  /* -----------------------
+     电脑端：有机错落
+     ----------------------- */
+  {% if section.settings.enable_organic %}
+    @media (min-width: 769px) {
+      .tarot-grid .tarot-card:nth-child(even) { margin-top: 5rem; }
+      .tarot-grid .tarot-card:nth-child(3n) { transform: scale(0.96); }
+      .tarot-grid .tarot-card:nth-child(3n):hover { transform: scale(0.96) translateY(-8px); }
+      .tarot-grid .tarot-card:nth-child(5n) { transform: scale(1.02); }
+      .tarot-grid .tarot-card:nth-child(5n):hover { transform: scale(1.02) translateY(-8px); }
+    }
+  {% endif %}
+
+  /* -----------------------
+     幻象层：迷雾流变
+     ----------------------- */
+  .tarot-visual-layer {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background: #111; 
+  }
+  .tarot-image {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0;
+    filter: blur(var(--tarot-blur-strength)); 
+    will-change: opacity, filter;
+  }
+  .tarot-image:nth-child(1) { animation: fluxOne var(--tarot-duration) infinite ease-in-out; }
+  .tarot-image:nth-child(2) { animation: fluxTwo var(--tarot-duration) infinite ease-in-out; }
+  .tarot-image:nth-child(3) { animation: fluxThree var(--tarot-duration) infinite ease-in-out; }
+
+  @keyframes fluxOne {
+    0% { opacity: 0; filter: blur(var(--tarot-blur-strength)); }
+    10% { opacity: 1; filter: blur(0px); } 
+    30% { opacity: 1; filter: blur(0px); } 
+    40% { opacity: 0; filter: blur(var(--tarot-blur-strength)); } 
+    100% { opacity: 0; filter: blur(var(--tarot-blur-strength)); }
+  }
+  @keyframes fluxTwo {
+    0%, 33% { opacity: 0; filter: blur(var(--tarot-blur-strength)); }
+    43% { opacity: 1; filter: blur(0px); }
+    63% { opacity: 1; filter: blur(0px); }
+    73% { opacity: 0; filter: blur(var(--tarot-blur-strength)); }
+    100% { opacity: 0; filter: blur(var(--tarot-blur-strength)); }
+  }
+  @keyframes fluxThree {
+    0%, 66% { opacity: 0; filter: blur(var(--tarot-blur-strength)); }
+    76% { opacity: 1; filter: blur(0px); }
+    96% { opacity: 1; filter: blur(0px); }
+    100% { opacity: 0; filter: blur(var(--tarot-blur-strength)); }
+  }
+
+  /* -----------------------
+     灵魂层 (Soul Layer)
+     ----------------------- */
+  .tarot-soul-layer {
+    position: absolute;
+    inset: 0;
+    z-index: 6; 
+    background: linear-gradient(to top, rgba(5,5,5,0.95) 0%, rgba(5,5,5,0.3) 40%, rgba(5,5,5,0) 100%);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 2rem;
+    opacity: 0; 
+    transition: opacity 0.8s ease;
+    border-radius: inherit;
+  }
+  .tarot-card:hover .tarot-soul-layer { opacity: 1; }
+  
+  .tarot-chant {
+    font-family: 'Times New Roman', serif;
+    font-style: italic;
+    font-size: 0.9rem;
+    color: #aaa;
+    margin-bottom: 0.5rem;
+    letter-spacing: 0.05em;
+    transform: translateY(10px);
+    transition: transform 0.6s ease;
+  }
+  .tarot-card:hover .tarot-chant { transform: translateY(0); }
+
+  .tarot-title {
+    font-family: 'Times New Roman', serif;
+    font-size: 1.4rem;
+    color: {{ text_color }};
+    margin-bottom: 1.5rem;
+    letter-spacing: 0.1em;
+    font-weight: normal;
+    text-shadow: 0 0 10px rgba(0,0,0,0.5);
+  }
+  .tarot-decree-btn {
+    display: inline-block;
+    color: {{ text_color }};
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    padding-bottom: 5px;
+    border-bottom: 1px solid {{ text_color }};
+  }
+
+  @media (max-width: 768px) {
+    .tarot-soul-layer { opacity: 1; padding: 1.2rem; }
+    .tarot-title { font-size: 1.1rem; }
+    .tarot-chant { display: none; } 
+  }
+</style>
+
+<div class="tarot-section-container">
+  <div class="tarot-bg-noise"></div>
+  <div class="soul-filter-overlay"></div> 
+  
+  <div class="tarot-grid">
+    {%- assign target_products = section.settings.source_collection.products -%}
+    {%- if target_products == empty -%}
+       <div style="color:#D4AF37; width:100%; text-align:center; z-index:10;">
+         [系统] 虚空之中并无回响。请在配置面板选择一个产品系列。
+       </div>
+    {%- endif -%}
+
+    {%- for product in target_products limit: section.settings.items_to_show -%}
+      {%- assign img_list = product.metafields.custom.tarot_images.value -%}
+      {%- assign chant = product.metafields.custom.tarot_chant | default: "The silence speaks" -%}
+      {%- assign decree = product.metafields.custom.tarot_decree | default: "迎接终局" -%}
+      {%- assign delay_seed = forloop.index0 | times: 2.0 -%}
+      
+      {%- assign loading_strategy = 'lazy' -%}
+      {%- assign fetch_priority = 'auto' -%}
+      {%- if forloop.index <= 2 -%}
+        {%- assign loading_strategy = 'eager' -%}
+        {%- assign fetch_priority = 'high' -%}
+      {%- endif -%}
+
+      <div class="tarot-card {% if section.settings.enable_classical_border %}classical-mode{% endif %}" 
+           onclick="window.location.href='{{ product.url }}'"
+           style="--animation-delay: -{{ delay_seed }}s;">
+        
+        <div class="tarot-visual-layer">
+          {%- if img_list != blank and img_list.count >= 3 -%}
+            {%- for img in img_list limit: 3 -%}
+              {%- if forloop.first -%}
+                 {{ img | image_url: width: 800 | image_tag: 
+                    loading: loading_strategy, 
+                    fetchpriority: fetch_priority, 
+                    class: 'tarot-image', 
+                    style: 'animation-delay: var(--animation-delay);' 
+                 }}
+              {%- else -%}
+                 {{ img | image_url: width: 800 | image_tag: 
+                    loading: 'lazy', 
+                    class: 'tarot-image', 
+                    style: 'animation-delay: var(--animation-delay);' 
+                 }}
+              {%- endif -%}
+            {%- endfor -%}
+          {%- elsif product.featured_image != blank -%}
+             {{ product.featured_image | image_url: width: 800 | image_tag: 
+                loading: loading_strategy, 
+                fetchpriority: fetch_priority,
+                class: 'tarot-image',
+                style: 'opacity: 1; filter: blur(0); animation: none;'
+             }}
+          {%- endif -%}
+        </div>
+
+        <div class="tarot-soul-layer">
+          <div class="tarot-chant">{{ chant }}</div>
+          <h3 class="tarot-title">{{ product.title }}</h3>
+          <span class="tarot-decree-btn">> {{ decree }} <</span>
+        </div>
+        
+      </div>
+    {%- endfor -%}
+  </div>
+</div>
+
+{% schema %}
+{
+  "name": "塔罗剧场 (几何拓印版)",
+  "settings": [
+    {
+      "type": "header",
+      "content": "🔮 数据源"
+    },
+    {
+      "type": "collection",
+      "id": "source_collection",
+      "label": "选择产品系列"
+    },
+    {
+      "type": "range",
+      "id": "items_to_show",
+      "min": 4,
+      "max": 24,
+      "step": 1,
+      "default": 6,
+      "label": "显化数量"
+    },
+    {
+      "type": "header",
+      "content": "🎞️ 质感与胶片 (Texture)"
+    },
+    {
+      "type": "range",
+      "id": "noise_intensity",
+      "min": 0,
+      "max": 100,
+      "step": 5,
+      "default": 30,
+      "label": "胶片噪点强度"
+    },
+    {
+      "type": "range",
+      "id": "shadow_intensity",
+      "min": 0,
+      "max": 100,
+      "step": 5,
+      "default": 50,
+      "label": "暗影深度"
+    },
+    {
+      "type": "header",
+      "content": "📐 几何控制 (拓印逻辑)"
+    },
+    {
+      "type": "range",
+      "id": "desktop_card_width",
+      "min": 200,
+      "max": 500,
+      "step": 10,
+      "default": 300,
+      "label": "💻 电脑端：卡片固定宽度",
+      "info": "电脑端拱门顶部半径 = 宽度 / 2"
+    },
+    {
+      "type": "range",
+      "id": "mobile_width_min",
+      "min": 50,
+      "max": 90,
+      "step": 5,
+      "default": 60,
+      "label": "📱 手机端：最小宽度 (%)"
+    },
+    {
+      "type": "range",
+      "id": "mobile_width_max",
+      "min": 50,
+      "max": 100,
+      "step": 5,
+      "default": 90,
+      "label": "📱 手机端：最大宽度 (%)"
+    },
+    {
+      "type": "header",
+      "content": "🏛️ 边框与形态"
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_arch",
+      "label": "开启【拱门】形态",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "corner_radius",
+      "min": 0,
+      "max": 50,
+      "step": 1,
+      "default": 10,
+      "label": "底部圆角半径 (px)",
+      "info": "仅控制底部。"
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_classical_border",
+      "label": "开启【古典双线】窗棂",
+      "default": true
+    },
+    {
+      "type": "header",
+      "content": "✨ 灵魂滤镜"
+    },
+    {
+      "type": "range",
+      "id": "filter_opacity",
+      "min": 0,
+      "max": 80,
+      "step": 5,
+      "default": 30,
+      "label": "滤镜浓度 (%)"
+    },
+    {
+      "type": "color",
+      "id": "filter_tone",
+      "label": "滤镜色调",
+      "default": "#4b0082"
+    },
+    {
+      "type": "header",
+      "content": "⏳ 节奏与布局"
+    },
+    {
+      "type": "range",
+      "id": "cycle_duration",
+      "min": 5,
+      "max": 20,
+      "step": 1,
+      "default": 12,
+      "label": "轮播周期 (秒)"
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_organic",
+      "label": "开启【有机错落】布局",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "gap_desktop",
+      "min": 0,
+      "max": 100,
+      "step": 5,
+      "default": 40,
+      "label": "电脑端卡片间距 (px)"
+    }
+  ],
+  "presets": [
+    {
+      "name": "Auralia 塔罗剧场 (拓印版)"
+    }
+  ]
+}
+{% endschema %}
