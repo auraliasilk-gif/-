@@ -1,0 +1,379 @@
+{% schema %}
+{
+  "name": "🗿 Genesis Monument V6",
+  "settings": [
+    {
+      "type": "header",
+      "content": "🔴 核心数据"
+    },
+    {
+      "type": "product",
+      "id": "target_product",
+      "label": "绑定法器",
+      "info": "默认读取当前产品。"
+    },
+    {
+      "type": "header",
+      "content": "🗿 黑石板材质 (Slate Material)"
+    },
+    {
+      "type": "range",
+      "id": "bg_opacity",
+      "min": 0,
+      "max": 100,
+      "step": 5,
+      "unit": "%",
+      "label": "石板底色浓度",
+      "default": 85,
+      "info": "控制黑石板的深浅。数值越高越黑，越不透明。"
+    },
+    {
+      "type": "range",
+      "id": "blur_amount",
+      "min": 0,
+      "max": 20,
+      "step": 1,
+      "unit": "px",
+      "label": "磨砂模糊度 (背景透视)",
+      "default": 5,
+      "info": "控制石板后方背景的模糊程度。"
+    },
+    {
+      "type": "range",
+      "id": "border_width",
+      "min": 0,
+      "max": 5,
+      "step": 1,
+      "unit": "px",
+      "label": "边框宽度",
+      "default": 1
+    },
+    {
+      "type": "color",
+      "id": "border_color",
+      "label": "边框颜色",
+      "default": "#5A4A32"
+    },
+    {
+      "type": "header",
+      "content": "☁️ 悬浮阴影 (Levitation Shadow)"
+    },
+    {
+      "type": "range",
+      "id": "shadow_opacity",
+      "min": 0,
+      "max": 100,
+      "step": 10,
+      "unit": "%",
+      "label": "阴影强度",
+      "default": 60
+    },
+    {
+      "type": "range",
+      "id": "shadow_y_offset",
+      "min": 0,
+      "max": 60,
+      "step": 5,
+      "unit": "px",
+      "label": "悬浮高度 (Y轴偏移)",
+      "default": 30
+    },
+    {
+      "type": "range",
+      "id": "shadow_blur",
+      "min": 20,
+      "max": 150,
+      "step": 10,
+      "unit": "px",
+      "label": "阴影模糊半径 (柔焦)",
+      "default": 80,
+      "info": "数值越大，阴影越柔和扩散。"
+    },
+    {
+      "type": "header",
+      "content": "📐 尺寸与布局"
+    },
+    {
+      "type": "range",
+      "id": "slab_width",
+      "min": 300,
+      "max": 1200,
+      "step": 50,
+      "unit": "px",
+      "label": "最大宽度限制",
+      "default": 600
+    },
+    {
+      "type": "range",
+      "id": "mobile_padding",
+      "min": 10,
+      "max": 60,
+      "step": 5,
+      "unit": "px",
+      "label": "手机端内部边距",
+      "default": 30
+    },
+    {
+      "type": "range",
+      "id": "section_height_mobile",
+      "min": 30,
+      "max": 100,
+      "step": 5,
+      "unit": "vh",
+      "label": "手机端高度",
+      "default": 70
+    },
+    {
+      "type": "range",
+      "id": "section_height_desktop",
+      "min": 30,
+      "max": 100,
+      "step": 5,
+      "unit": "vh",
+      "label": "电脑端高度",
+      "default": 80
+    },
+    {
+      "type": "checkbox",
+      "id": "hide_on_desktop",
+      "label": "❌ 在电脑端隐藏",
+      "default": false
+    },
+    {
+      "type": "header",
+      "content": "✍️ 诗歌排版"
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_vertical_text",
+      "label": "📜 手机端启用竖排 (居中)",
+      "default": true,
+      "info": "开启后，手机端文字将从右向左竖向排列并居中。电脑端强制横排。"
+    },
+    {
+      "type": "color",
+      "id": "text_color",
+      "label": "文字颜色",
+      "default": "#BFAE92"
+    },
+    {
+      "type": "range",
+      "id": "font_size_mobile",
+      "min": 12,
+      "max": 36,
+      "step": 1,
+      "unit": "px",
+      "label": "手机字号 (控制大小)",
+      "default": 18
+    },
+    {
+      "type": "range",
+      "id": "speed",
+      "min": 2,
+      "max": 10,
+      "step": 1,
+      "unit": "s",
+      "label": "吟唱速度",
+      "default": 4
+    }
+  ],
+  "presets": [
+    {
+      "name": "🗿 Genesis Monument V6"
+    }
+  ]
+}
+{% endschema %}
+
+{% assign target_item = section.settings.target_product | default: product %}
+{% assign poem_raw = target_item.metafields.custom['creat-poem'] %}
+
+{% if poem_raw != blank %}
+
+<style>
+  /* [ 外部容器 ] */
+  .monument-section {
+    position: relative;
+    width: 100%;
+    background: transparent; 
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    overflow: hidden;
+    height: {{ section.settings.section_height_mobile }}vh;
+  }
+
+  /* [ 黑石板 (Dark Slate Slab) ] */
+  .monument-slab {
+    position: relative;
+    width: 100%;
+    max-width: {{ section.settings.slab_width }}px;
+    height: 100%;
+    max-height: 85vh;
+    padding: {{ section.settings.mobile_padding }}px;
+    
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    /* --- V6.0 核心：黑石板材质 --- */
+    /* 1. 底色：深灰色底子，浓度由设置决定 */
+    background-color: rgba(20, 20, 22, {{ section.settings.bg_opacity | divided_by: 100.0 }});
+    
+    /* 2. 纹理：叠加岩石暗纹 */
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.6' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.15'/%3E%3C/svg%3E");
+    background-blend-mode: overlay;
+
+    /* 3. 磨砂透视 */
+    backdrop-filter: blur({{ section.settings.blur_amount }}px);
+    -webkit-backdrop-filter: blur({{ section.settings.blur_amount }}px);
+    
+    /* 4. 边框 */
+    border: {{ section.settings.border_width }}px solid {{ section.settings.border_color }};
+    border-radius: 4px;
+
+    /* --- V6.0 核心：柔焦悬浮阴影 --- */
+    /* Y轴偏移 + 模糊半径 (shadow_blur) + 强度 */
+    box-shadow: 0 {{ section.settings.shadow_y_offset }}px {{ section.settings.shadow_blur }}px rgba(0, 0, 0, {{ section.settings.shadow_opacity | divided_by: 100.0 }});
+
+    /* === 出场动画初始状态 === */
+    opacity: 0;
+    transform: scale(0.92) translateY(20px); /* 初始微缩且下沉 */
+    filter: blur(15px);
+    transition: opacity 1.8s ease-out, transform 1.8s cubic-bezier(0.2, 0.8, 0.2, 1), filter 1.8s ease-out;
+  }
+
+  /* [ 唤醒状态 ] */
+  .monument-slab.revealed {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+    filter: blur(0);
+  }
+
+  /* [ 诗句容器 ] */
+  .poem-container {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+    width: 100%;
+    height: 100%;
+    /* 确保容器本身也是居中对齐的 */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  /* [ 诗句 ] */
+  .poem-line {
+    font-family: serif; 
+    line-height: 1.6;
+    letter-spacing: 0.2em;
+    color: {{ section.settings.text_color }};
+    opacity: 0;
+    position: absolute;
+    /* 核心居中定位 */
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%) scale(0.95);
+    transition: opacity 1.5s ease-in-out, transform 2s ease-out;
+    
+    /* 大小控制：由手机字号决定 */
+    font-size: {{ section.settings.font_size_mobile }}px;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.5); 
+
+    /* --- V6.0 核心：竖排居中修正 --- */
+    {% if section.settings.enable_vertical_text %}
+      writing-mode: vertical-rl;
+      text-orientation: mixed;
+      white-space: nowrap; 
+      /* 确保在竖排模式下，文本块自身不占满宽度，从而被绝对定位完美居中 */
+      width: auto; 
+      height: auto;
+      max-height: 90%; 
+      text-align: center; /* 确保行内文字居中 */
+    {% else %}
+      width: 100%; /* 横排模式下占满宽度 */
+    {% endif %}
+  }
+
+  .poem-line.active {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+    text-shadow: 0 0 25px {{ section.settings.text_color | color_modify: 'alpha', 0.4 }};
+  }
+
+  /* [ 电脑端适配 ] */
+  @media (min-width: 768px) {
+    .monument-section {
+      height: {{ section.settings.section_height_desktop }}vh;
+      {% if section.settings.hide_on_desktop %}display: none !important;{% endif %}
+    }
+    .monument-slab {
+        padding: 40px; /* 电脑端内边距加大 */
+    }
+    .poem-line {
+      font-size: calc({{ section.settings.font_size_mobile }}px + 8px);
+      /* 电脑端强制恢复横排 */
+      writing-mode: horizontal-tb !important; 
+      white-space: normal !important;
+      width: 100% !important;
+    }
+  }
+</style>
+
+<div class="monument-section">
+  <div class="monument-slab" id="slab-{{ section.id }}">
+    <div class="poem-container" id="poem-container-{{ section.id }}"></div>
+  </div>
+</div>
+
+<script>
+  (function() {
+    var rawPoem = `{{ poem_raw }}`;
+    var lines = rawPoem.split('\n').filter(line => line.trim() !== '');
+    var container = document.getElementById('poem-container-{{ section.id }}');
+    var slab = document.getElementById('slab-{{ section.id }}');
+    var speed = {{ section.settings.speed }} * 1000;
+    var currentIndex = 0;
+
+    // 1. 初始化 IntersectionObserver (视口监听)
+    var observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          // 稍微延迟一点触发，让用户看清它浮现的过程
+          setTimeout(() => {
+              entry.target.classList.add('revealed');
+          }, 100);
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.15 }); // 进入视口 15% 即触发
+
+    if (slab) observer.observe(slab);
+
+    // 2. 诗歌播放逻辑
+    container.innerHTML = '';
+    lines.forEach((line) => {
+      var p = document.createElement('div');
+      p.classList.add('poem-line');
+      p.innerText = line;
+      container.appendChild(p);
+    });
+
+    var lineElements = container.querySelectorAll('.poem-line');
+    function playChant() {
+      lineElements.forEach(el => el.classList.remove('active'));
+      if (lineElements[currentIndex]) lineElements[currentIndex].classList.add('active');
+      currentIndex++;
+      if (currentIndex >= lineElements.length) currentIndex = 0;
+    }
+
+    if (lines.length > 0) {
+      // 首次播放延迟，配合石板出场
+      setTimeout(playChant, 800);
+      setInterval(playChant, speed);
+    }
+  })();
+</script>
+
+{% endif %}
