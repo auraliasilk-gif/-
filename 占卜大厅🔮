@@ -1,0 +1,402 @@
+{% comment %}
+  LOBBY V7.2: CLEAN ARCHITECT
+  - Removed: Gravity Gradient & Noise
+  - Added: Solid Background Color Picker
+  - Features: Manual Padding, Arch/Square Toggle, Deco Border Toggle
+{% endcomment %}
+
+{% schema %}
+{
+  "name": "🔮 Lobby (V7.2 Clean)",
+  "settings": [
+    {
+      "type": "header",
+      "content": "🎨 背景与布局"
+    },
+    {
+      "type": "color",
+      "id": "bg_color",
+      "label": "背景颜色",
+      "default": "#000000",
+      "info": "移除引力场后，由此控制背景。"
+    },
+    {
+      "type": "range",
+      "id": "padding_top",
+      "label": "顶部边距 (Padding Top)",
+      "min": 0,
+      "max": 200,
+      "step": 4,
+      "default": 60,
+      "unit": "px"
+    },
+    {
+      "type": "range",
+      "id": "padding_bottom",
+      "label": "底部边距 (Padding Bottom)",
+      "min": 0,
+      "max": 200,
+      "step": 4,
+      "default": 60,
+      "unit": "px"
+    },
+    {
+      "type": "header",
+      "content": "📝 内容设置"
+    },
+    {
+      "type": "text",
+      "id": "title",
+      "label": "大厅标题",
+      "default": "CHOOSE YOUR PATH"
+    },
+    {
+      "type": "header",
+      "content": "📐 卡片尺寸"
+    },
+    {
+      "type": "range",
+      "id": "card_scale",
+      "label": "卡片尺寸缩放",
+      "min": 0.5,
+      "max": 1.5,
+      "step": 0.1,
+      "default": 1.0,
+      "info": "基准尺寸 240x360px"
+    },
+    {
+      "type": "range",
+      "id": "grid_gap",
+      "label": "卡片间距",
+      "min": 20,
+      "max": 100,
+      "step": 5,
+      "default": 40,
+      "unit": "px"
+    },
+    {
+      "type": "header",
+      "content": "🏛️ 卡片形态与设计 (Card Architecture)"
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_arch_shape",
+      "label": "开启拱门形态 (Arch Shape)",
+      "default": false,
+      "info": "将卡片顶部变为半圆形。关闭则为方形。"
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_deco_border",
+      "label": "开启饰金边框 (Deco Frame)",
+      "default": false,
+      "info": "添加内嵌的双层设计感边框，适配任何形状。"
+    },
+    {
+      "type": "range",
+      "id": "card_radius",
+      "label": "基础圆角半径",
+      "min": 0,
+      "max": 40,
+      "step": 2,
+      "default": 12,
+      "unit": "px",
+      "info": "拱门模式下仅影响底部圆角。"
+    },
+    {
+      "type": "header",
+      "content": "💡 视觉与光效"
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_bw_idle",
+      "label": "静止时黑白 (Grayscale Idle)",
+      "default": true
+    },
+    {
+      "type": "checkbox",
+      "id": "enable_breathing",
+      "label": "开启自动呼吸 (Auto Breathing)",
+      "default": true
+    },
+    {
+      "type": "range",
+      "id": "glow_opacity",
+      "label": "呼吸光最大不透明度 (强度)",
+      "min": 20,
+      "max": 100,
+      "step": 10,
+      "default": 60,
+      "unit": "%"
+    },
+    {
+      "type": "range",
+      "id": "glow_spread",
+      "label": "呼吸光扩散范围",
+      "min": 10,
+      "max": 80,
+      "step": 5,
+      "default": 35,
+      "unit": "px"
+    }
+  ],
+  "blocks": [
+    {
+      "type": "chamber_slot",
+      "name": "🔮 密室卡槽",
+      "settings": [
+        {
+          "type": "metaobject",
+          "id": "target_chamber",
+          "label": "选择一个 Oracle Chamber 条目",
+          "metaobject_type": "oracle_chamber"
+        },
+        {
+          "type": "text",
+          "id": "custom_label",
+          "label": "自定义覆盖名称 (选填)",
+          "info": "若不填，默认显示元对象原本的名字"
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "🔮 Lobby (V7.2 Clean)",
+      "blocks": [
+        { "type": "chamber_slot" },
+        { "type": "chamber_slot" },
+        { "type": "chamber_slot" }
+      ]
+    }
+  ]
+}
+{% endschema %}
+
+{%- style -%}
+  #shopify-section-{{ section.id }} {
+    /* 布局变量 */
+    --lobby-gap: {{ section.settings.grid_gap }}px;
+    --card-scale: {{ section.settings.card_scale }};
+    --card-width: calc(240px * var(--card-scale));
+    --card-height: calc(360px * var(--card-scale));
+    
+    /* 间距与背景 */
+    --pad-top: {{ section.settings.padding_top }}px;
+    --pad-bottom: {{ section.settings.padding_bottom }}px;
+    --section-bg: {{ section.settings.bg_color }};
+    
+    /* 控制变量 */
+    --card-base-radius: {{ section.settings.card_radius }}px;
+    --glow-spread: {{ section.settings.glow_spread }}px;
+  }
+
+  /* 呼吸动画 */
+  @keyframes lobbyBreath {
+    0%, 100% {
+      box-shadow: 0 0 0 transparent;
+      border-color: var(--theme-dim);
+    }
+    50% {
+      box-shadow: 0 0 var(--glow-spread) var(--theme-glow);
+      border-color: var(--theme-color);
+    }
+  }
+
+  /* [ 容器：纯净版 ] */
+  .lobby-container {
+    position: relative;
+    width: 100%; /* 适配页面宽度 */
+    background: var(--section-bg); /* 用户自定义背景色 */
+    
+    /* 直接控制组块边距 */
+    padding-top: var(--pad-top);
+    padding-bottom: var(--pad-bottom);
+    padding-left: 20px;
+    padding-right: 20px;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .lobby-title {
+    position: relative; z-index: 2;
+    font-family: serif; font-size: 2.5rem; color: #D4AF37; margin-bottom: 60px; letter-spacing: 0.2em;
+    text-shadow: 0 0 20px rgba(212, 175, 55, 0.5); text-transform: uppercase; text-align: center;
+  }
+  
+  .chamber-grid {
+    position: relative; z-index: 2;
+    display: flex; flex-wrap: wrap; justify-content: center; 
+    gap: var(--lobby-gap); 
+    max-width: 1600px; width: 100%;
+  }
+
+  /* === 卡片核心容器 === */
+  .chamber-card {
+    position: relative;
+    width: var(--card-width); 
+    height: var(--card-height); 
+    border: 1px solid #333; /* 默认边框 */
+    overflow: hidden;
+    cursor: pointer;
+    text-decoration: none;
+    transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.4s ease, border-color 0.4s ease;
+    background: #050505;
+    
+    /* 默认圆角 (方形模式) */
+    border-radius: var(--card-base-radius);
+  }
+
+  /* [ 🏛️ 形态控制：拱门 ] */
+  .chamber-card.is-arch {
+    /* 顶部变圆，底部保持基础圆角 */
+    border-radius: 120px 120px var(--card-base-radius) var(--card-base-radius);
+  }
+
+  /* [ ✨ 边框设计：双层饰金线框 ] */
+  /* 当开启设计感边框时，隐藏默认边框以避免冲突 */
+  .chamber-card.has-deco {
+    border-color: transparent; 
+    background-clip: padding-box;
+  }
+  
+  /* 外层边框 (由 ::before 模拟) */
+  .chamber-card.has-deco::before {
+    content: ""; position: absolute; inset: 0;
+    border-radius: inherit; /* 继承形状 */
+    border: 1px solid var(--theme-dim);
+    pointer-events: none; z-index: 3;
+    transition: border-color 0.4s;
+  }
+
+  /* 内层悬浮金线 (由 ::after 模拟) */
+  .chamber-card.has-deco::after {
+    content: ""; position: absolute; 
+    inset: 6px; /* 向内缩进 */
+    border-radius: inherit; /* 继承形状 */
+    border: 1px double var(--theme-color); 
+    opacity: 0.4;
+    pointer-events: none; z-index: 3;
+    transition: all 0.5s ease;
+  }
+
+  /* 呼吸逻辑 (适配新边框结构) */
+  {% if section.settings.enable_breathing %}
+    /* 无设计边框时的呼吸 */
+    .chamber-card:not(.has-deco):not(:hover) {
+      animation: lobbyBreath var(--breath-duration) ease-in-out infinite;
+    }
+    /* 有设计边框时的呼吸 (作用于 before) */
+    .chamber-card.has-deco:not(:hover)::before {
+      animation: lobbyBreath var(--breath-duration) ease-in-out infinite;
+    }
+  {% endif %}
+
+  /* === 悬停特效 === */
+  .chamber-card:hover {
+    transform: translateY(-15px);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.9), 0 0 var(--glow-spread) var(--theme-glow);
+    /* 无设计边框时直接变色 */
+    border-color: var(--theme-color);
+  }
+  
+  /* 有设计边框时的悬停 */
+  .chamber-card.has-deco:hover::before {
+    border-color: var(--theme-color);
+    animation: none;
+  }
+  .chamber-card.has-deco:hover::after {
+    inset: 4px; /* 内部线框向外扩张 */
+    opacity: 1;
+    border-width: 1px;
+    box-shadow: inset 0 0 10px var(--theme-dim);
+  }
+
+  /* 图片层 */
+  .chamber-img {
+    width: 100%; height: 100%; object-fit: cover; 
+    transition: 0.8s ease;
+    {% if section.settings.enable_bw_idle %}
+      opacity: 0.5; filter: grayscale(100%) contrast(1.2);
+    {% else %}
+      opacity: 0.8; filter: grayscale(0%) contrast(1.1) brightness(0.8);
+    {% endif %}
+  }
+  .chamber-card:hover .chamber-img { 
+    opacity: 1; filter: grayscale(0%) contrast(1.1) brightness(1.1); 
+    transform: scale(1.1);
+  }
+
+  /* 文字层 */
+  .chamber-info {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    z-index: 4; pointer-events: none; padding: 20px;
+  }
+  .chamber-name {
+    color: #fff; font-family: sans-serif; letter-spacing: 0.3em; text-transform: uppercase;
+    font-size: 0.9rem; text-align: center; margin-top: 20px;
+    text-shadow: 0 2px 10px #000; transition: 0.4s;
+  }
+  .chamber-sigil-icon {
+    font-size: 24px; color: #fff; opacity: 0.5; margin-bottom: 10px; transition: 0.4s;
+  }
+  .chamber-card:hover .chamber-name { letter-spacing: 0.4em; color: var(--theme-color); }
+  .chamber-card:hover .chamber-sigil-icon { opacity: 1; color: var(--theme-color); transform: scale(1.2); }
+
+{%- endstyle -%}
+
+<div class="lobby-container">
+  {% if section.settings.title != blank %}
+    <h1 class="lobby-title">{{ section.settings.title }}</h1>
+  {% endif %}
+  
+  <div class="chamber-grid">
+    
+    {% for block in section.blocks %}
+      {% assign room = block.settings.target_chamber %}
+      
+      {% if room != blank %}
+        {% comment %} 颜色安全提取逻辑 {% endcomment %}
+        {% assign safe_color = room.theme_color.value | default: room.theme_color | default: '#D4AF37' %}
+        {% assign theme_color_str = safe_color | append: '' %}
+        
+        {% assign opacity_alpha = section.settings.glow_opacity | divided_by: 100.0 %}
+        {% assign theme_glow = theme_color_str | color_modify: 'alpha', opacity_alpha %}
+        {% assign theme_dim = theme_color_str | color_modify: 'alpha', 0.2 %}
+        
+        {% comment %} 随机呼吸节奏 {% endcomment %}
+        {% assign random_salt = forloop.index | times: 17 %}
+        {% assign random_seed = "now" | date: "%N" | plus: random_salt | modulo: 5 | plus: 3 %}
+
+        <a href="{{ room.system.url }}" 
+           class="chamber-card {% if section.settings.enable_arch_shape %}is-arch{% endif %} {% if section.settings.enable_deco_border %}has-deco{% endif %}"
+           style="
+             --theme-color: {{ theme_color_str }}; 
+             --theme-glow: {{ theme_glow }};
+             --theme-dim: {{ theme_dim }};
+             --breath-duration: {{ random_seed }}s;
+           ">
+          
+          {% if room.sigil != blank %}
+            {{ room.sigil | image_url: width: 600 | image_tag: class: 'chamber-img', loading: 'lazy' }}
+          {% else %}
+            <div style="width:100%;height:100%;background:#111;display:flex;align-items:center;justify-content:center;color:#333;font-size:10px;">NO VISUAL</div>
+          {% endif %}
+          
+          <div class="chamber-info">
+            <div class="chamber-sigil-icon">✦</div>
+            <div class="chamber-name">
+              {{ block.settings.custom_label | default: room.name }}
+            </div>
+          </div>
+          
+        </a>
+      {% endif %}
+    {% endfor %}
+
+  </div>
+</div>
