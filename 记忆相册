@@ -1,0 +1,548 @@
+{% comment %}
+  AURALIA SOUL PHARMACY
+  Version: 8.0 (Auto-Sensing Core, Quantity Control, Loop Safety)
+  Author: The Code Alchemist
+{% endcomment %}
+
+{%- assign settings_bg = section.settings.bg_color | default: '#050505' -%}
+{%- assign padding_y = section.settings.section_padding | default: 80 -%}
+{%- assign totem_rise = section.settings.totem_rise_level | default: 60 -%}
+{%- assign q_limit = section.settings.question_limit | default: 5 -%}
+
+{%- assign font_base_desktop = section.settings.font_size_base | default: 18 -%}
+{%- assign font_base_mobile = font_base_desktop | times: 0.75 -%} 
+
+{%- assign time_scale = section.settings.rhythm_speed | default: 1.2 -%}
+
+<style>
+  /* 全局变量定义 */
+  #shopify-section-{{ section.id }} {
+    --pharmacy-bg: {{ settings_bg }};
+    --pharmacy-padding: {{ padding_y }}px;
+    
+    /* 时间基准 */
+    --time-scale: {{ time_scale }};
+    --anim-speed-fast: calc(0.6s * var(--time-scale));
+    --anim-speed-slow: calc(1.5s * var(--time-scale));
+    --anim-speed-totem: calc(2.5s * var(--time-scale));
+    
+    /* 字体 */
+    --font-size-base: {{ font_base_desktop }}px;
+    --font-size-title: calc(var(--font-size-base) * 1.6);
+    
+    /* 图腾 */
+    --totem-ascend-y: -{{ totem_rise }}%; 
+  }
+
+  @media (max-width: 768px) {
+    #shopify-section-{{ section.id }} {
+      --font-size-base: {{ font_base_mobile }}px;
+    }
+  }
+
+  /* 布局 */
+  .soul-pharmacy-wrapper {
+    background-color: var(--pharmacy-bg);
+    min-height: 85vh; 
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+    padding: var(--pharmacy-padding) 2rem;
+  }
+
+  /* 噪点 */
+  .pharmacy-noise {
+    position: absolute;
+    inset: 0;
+    opacity: 0.06;
+    pointer-events: none;
+    z-index: 1;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  }
+
+  .content-chamber {
+    max-width: 800px;
+    width: 100%;
+    text-align: center;
+    position: relative;
+    z-index: 5; 
+  }
+
+  /* --- 图腾层 --- */
+  .totem-chamber {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -40%);
+    width: 500px;
+    height: 500px;
+    z-index: 2; 
+    pointer-events: none;
+    opacity: 0; 
+    filter: blur(25px); 
+    transition: all var(--anim-speed-totem) cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  .totem-chamber.ascend {
+    opacity: 0.6; 
+    filter: blur(0px); 
+    transform: translate(-50%, var(--totem-ascend-y)); 
+  }
+
+  .totem-image {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    mix-blend-mode: screen; 
+  }
+
+  /* --- 文字动画 --- */
+  .oracle-text-element {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity var(--anim-speed-slow) ease-out, transform var(--anim-speed-slow) cubic-bezier(0.2, 0.8, 0.2, 1);
+    will-change: opacity, transform;
+  }
+  
+  .oracle-text-element.active {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* 问题 */
+  .oracle-question {
+    font-family: 'Times New Roman', serif;
+    font-size: var(--font-size-title); 
+    font-weight: normal;
+    letter-spacing: 0.1em;
+    line-height: 1.4;
+    margin-bottom: 4rem;
+    min-height: 4rem;
+    color: #D4AF37; 
+    text-shadow: 0 0 20px rgba(0,0,0,0.9);
+  }
+
+  /* 判决书 */
+  .oracle-verdict-content {
+    font-size: calc(var(--font-size-base) * 1.1);
+    color: #fff;
+    margin-bottom: 2rem;
+    line-height: 1.8;
+  }
+  .oracle-verdict-content strong {
+    font-weight: normal;
+    color: var(--element-color, #D4AF37); 
+    font-size: calc(var(--font-size-title) * 0.9);
+  }
+
+  /* 选项 */
+  .oracle-answers {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    width: 100%;
+    max-width: 550px;
+    margin: 0 auto;
+  }
+
+  .oracle-option {
+    font-family: 'Times New Roman', serif;
+    font-size: var(--font-size-base);
+    letter-spacing: 0.05em;
+    padding: 1.4rem 1.2rem;
+    border: 1px solid rgba(212, 175, 55, 0.2); 
+    background: rgba(5, 5, 5, 0.7); 
+    color: #888;
+    cursor: pointer;
+    opacity: 0; 
+    transform: translateY(20px);
+    transition: all var(--anim-speed-fast) cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    
+    --element-h-color: #D4AF37; 
+  }
+
+  .oracle-option.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .oracle-option:hover {
+    color: #fff; 
+    border-color: var(--element-h-color); 
+    box-shadow: 0 0 20px var(--element-h-color-dim, rgba(212,175,55,0.15));
+    transform: translateY(-3px) scale(1.02);
+  }
+
+  /* 极化按钮 */
+  .oracle-option.polarized-btn {
+    margin-top: 3rem;
+    font-size: calc(var(--font-size-base) * 1.1);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--element-color) !important;
+    border-color: var(--element-color) !important;
+    background: transparent;
+  }
+  
+  .oracle-option.polarized-btn:hover {
+    background: var(--element-color);
+    color: #000 !important; 
+    box-shadow: 0 0 40px var(--element-color-glow);
+  }
+
+  @media (max-width: 768px) {
+    .totem-chamber { width: 320px; height: 320px; }
+    .oracle-question { margin-bottom: 2.5rem; }
+    .oracle-option { padding: 1.1rem; }
+  }
+</style>
+
+<div class="soul-pharmacy-wrapper">
+  <div class="pharmacy-noise"></div>
+
+  <div id="TotemChamber" class="totem-chamber">
+    <img id="TotemImage" class="totem-image" src="" alt="" loading="lazy">
+  </div>
+
+  <div class="content-chamber">
+    <div id="OracleStage" class="oracle-stage">
+      <div id="QuestionText" class="oracle-question oracle-text-element"></div>
+      <div id="AnswerMatrix" class="oracle-answers"></div>
+    </div>
+  </div>
+
+  <script type="application/json" id="ElementConfig">
+    {
+      "fire": {
+        "verdict": {{ section.settings.verdict_fire | json }},
+        "btn_label": {{ section.settings.btn_fire | default: "ENTER IGNIS" | json }},
+        "color": {{ section.settings.color_fire | default: "#ff3300" | json }},
+        "url": {{ section.settings.slot_fire.url | default: '/collections/all' | json }},
+        "totem": {{ section.settings.img_fire | image_url: width: 800 | json }}
+      },
+      "water": {
+        "verdict": {{ section.settings.verdict_water | json }},
+        "btn_label": {{ section.settings.btn_water | default: "ENTER AQUA" | json }},
+        "color": {{ section.settings.color_water | default: "#00aaff" | json }},
+        "url": {{ section.settings.slot_water.url | default: '/collections/all' | json }},
+        "totem": {{ section.settings.img_water | image_url: width: 800 | json }}
+      },
+      "wood": {
+        "verdict": {{ section.settings.verdict_wood | json }},
+        "btn_label": {{ section.settings.btn_wood | default: "ENTER SILVA" | json }},
+        "color": {{ section.settings.color_wood | default: "#00aa55" | json }},
+        "url": {{ section.settings.slot_wood.url | default: '/collections/all' | json }},
+        "totem": {{ section.settings.img_wood | image_url: width: 800 | json }}
+      },
+      "metal": {
+        "verdict": {{ section.settings.verdict_metal | json }},
+        "btn_label": {{ section.settings.btn_metal | default: "ENTER FERRUM" | json }},
+        "color": {{ section.settings.color_metal | default: "#e0e0e0" | json }},
+        "url": {{ section.settings.slot_metal.url | default: '/collections/all' | json }},
+        "totem": {{ section.settings.img_metal | image_url: width: 800 | json }}
+      },
+      "earth": {
+        "verdict": {{ section.settings.verdict_earth | json }},
+        "btn_label": {{ section.settings.btn_earth | default: "ENTER TERRA" | json }},
+        "color": {{ section.settings.color_earth | default: "#8b4513" | json }},
+        "url": {{ section.settings.slot_earth.url | default: '/collections/all' | json }},
+        "totem": {{ section.settings.img_earth | image_url: width: 800 | json }}
+      }
+    }
+  </script>
+
+  <script type="application/json" id="OracleData">
+    {%- assign real_cards = shop.metaobjects.oracle_card.values | sort: "dimension_tag" -%}
+    {%- if real_cards.size > 0 -%}
+      [
+        {%- for card in real_cards limit: q_limit -%}
+          {
+            "tag": {{ card.dimension_tag | json }},
+            "question": {{ card.question_text | json }},
+            "answers": {{ card.answers_matrix | newline_to_br | split: '<br />' | json }}
+          }{%- unless forloop.last -%},{%- endunless -%}
+        {%- endfor -%}
+      ]
+    {%- else -%}
+      [
+        { "question": "当黑夜降临，你最渴望的是？", "answers": ["燃烧的烈火", "深邃的海洋", "生长的藤蔓", "冰冷的刀锋", "坚固的岩石"] },
+        { "question": "伤口愈合之后，留下了什么？", "answers": ["愤怒的灰烬", "无尽的泪痕", "新生的嫩芽", "银色的疤痕", "尘封的记忆"] },
+        { "question": "你要前往哪里寻找救赎？", "answers": ["火山之巅", "深海之渊", "迷雾森林", "钢铁废墟", "荒芜沙漠"] }
+      ]
+    {%- endif -%}
+  </script>
+  
+  <input type="hidden" id="TimeScaleFactor" value="{{ time_scale }}">
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const rawDataElement = document.getElementById('OracleData');
+  const configElement = document.getElementById('ElementConfig');
+  const timeScale = parseFloat(document.getElementById('TimeScaleFactor').value) || 1.2;
+  
+  let scenarios = [];
+  let elementalConfig = {};
+
+  try {
+    scenarios = JSON.parse(rawDataElement.textContent);
+    elementalConfig = JSON.parse(configElement.textContent);
+  } catch (e) { console.error("Error", e); }
+
+  // 终极防错：如果解析后仍为空，手动注入一条数据防止崩溃
+  if (!scenarios || scenarios.length === 0) {
+    scenarios = [{ "question": "The void speaks...", "answers": ["Listen"] }];
+  }
+
+  let currentStageIndex = 0;
+  const soulScores = [0, 0, 0, 0, 0]; 
+  const ELEMENTS_KEY = ['fire', 'water', 'wood', 'metal', 'earth'];
+
+  const dom = {
+    question: document.getElementById('QuestionText'),
+    answers: document.getElementById('AnswerMatrix'),
+    totemBox: document.getElementById('TotemChamber'),
+    totemImg: document.getElementById('TotemImage')
+  };
+
+  const hexToRgba = (hex, alpha) => {
+    let r = parseInt(hex.slice(1, 3), 16), g = parseInt(hex.slice(3, 5), 16), b = parseInt(hex.slice(5, 7), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  };
+
+  const revealText = (element, textHTML) => {
+    return new Promise(resolve => {
+      element.classList.remove('active');
+      setTimeout(() => {
+        element.innerHTML = textHTML;
+        element.classList.add('active');
+        resolve();
+      }, 400 * timeScale);
+    });
+  };
+
+  // 洗牌算法
+  const shuffleArray = (array) => {
+    for (let i = array.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+  }
+
+  const renderScenario = async () => {
+    // 熔断机制：如果索引超标，强制进入终局
+    if (currentStageIndex >= scenarios.length) {
+      revealVerdict();
+      return;
+    }
+
+    const currentData = scenarios[currentStageIndex];
+    dom.question.classList.remove('active');
+    dom.answers.innerHTML = ''; 
+
+    await revealText(dom.question, currentData.question);
+    
+    if(currentData.answers && currentData.answers.length > 0){
+      // 1. 构建对象 (保留原始ID)
+      let optionsWithId = currentData.answers.map((text, originalIndex) => {
+        return { text: text.trim(), id: originalIndex };
+      }).filter(item => item.text !== "");
+
+      // 2. 打乱顺序 (Shuffling)
+      optionsWithId = shuffleArray(optionsWithId);
+
+      // 3. 渲染
+      optionsWithId.forEach((opt, visualIndex) => {
+        const btn = document.createElement('div');
+        btn.className = 'oracle-option';
+        btn.innerText = opt.text;
+        btn.style.setProperty('--element-h-color', '#D4AF37');
+        
+        // 绑定原始ID计分
+        btn.onclick = () => handleChoice(opt.id);
+        
+        dom.answers.appendChild(btn);
+        
+        setTimeout(() => { 
+          btn.classList.add('visible'); 
+        }, (600 + (visualIndex * 150)) * timeScale); 
+      });
+    } else {
+      // 如果没有选项，自动跳过
+      handleChoice(0);
+    }
+  };
+
+  const handleChoice = (elementIndex) => {
+    if (elementIndex < 5) soulScores[elementIndex]++;
+    const options = document.querySelectorAll('.oracle-option');
+    options.forEach(opt => {
+      opt.classList.remove('visible');
+      opt.style.opacity = '0';
+    });
+    dom.question.classList.remove('active');
+    
+    currentStageIndex++;
+    setTimeout(renderScenario, 800 * timeScale);
+  };
+
+  const revealVerdict = async () => {
+    const maxScore = Math.max(...soulScores);
+    const winningIndex = soulScores.findIndex(score => score === maxScore);
+    const key = ELEMENTS_KEY[winningIndex];
+    const resultConfig = elementalConfig[key]; 
+
+    dom.answers.innerHTML = '';
+    
+    if (resultConfig.totem) {
+      dom.totemImg.src = resultConfig.totem;
+      setTimeout(() => {
+        dom.totemBox.classList.add('ascend');
+      }, 500 * timeScale);
+    }
+
+    const finalHtml = resultConfig.verdict 
+                      ? `<div class="oracle-verdict-content">${resultConfig.verdict}</div>`
+                      : `你的灵魂属于 [ ${key.toUpperCase()} ]`;
+    
+    dom.question.style.setProperty('--element-color', resultConfig.color);
+    await revealText(dom.question, finalHtml);
+
+    const linkBtn = document.createElement('div');
+    linkBtn.className = 'oracle-option polarized-btn'; 
+    linkBtn.innerHTML = `> ${resultConfig.btn_label} <`;
+    linkBtn.style.setProperty('--element-color', resultConfig.color);
+    linkBtn.style.setProperty('--element-color-glow', hexToRgba(resultConfig.color, 0.6));
+    
+    dom.answers.appendChild(linkBtn);
+    setTimeout(() => { linkBtn.classList.add('visible'); }, 800 * timeScale);
+    
+    linkBtn.onclick = () => {
+      linkBtn.innerHTML = "GATE OPENING...";
+      linkBtn.style.opacity = "0.7";
+      setTimeout(() => {
+        window.location.href = resultConfig.url;
+      }, 600 * timeScale);
+    };
+  };
+
+  renderScenario();
+});
+</script>
+
+{% schema %}
+{
+  "name": "灵魂药铺 (智能内核版)",
+  "settings": [
+    {
+      "type": "header",
+      "content": "🧠 智能内核 (Smart Core)"
+    },
+    {
+      "type": "paragraph",
+      "content": "系统会自动侦测 Metaobjects。若有数据则加载真实题库；若无数据则加载默认演示题库。无需手动切换。"
+    },
+    {
+      "type": "range",
+      "id": "question_limit",
+      "min": 1,
+      "max": 10,
+      "step": 1,
+      "default": 5,
+      "label": "显化问题数量 (Questions Limit)",
+      "info": "从题库中截取前 N 道题进行测试。"
+    },
+    {
+      "type": "header",
+      "content": "⏳ 节奏与时空"
+    },
+    {
+      "type": "range",
+      "id": "rhythm_speed",
+      "min": 0.5,
+      "max": 2.0,
+      "step": 0.1,
+      "default": 1.2,
+      "label": "整体流速 (Time Scale)"
+    },
+    {
+      "type": "range",
+      "id": "section_padding",
+      "min": 40,
+      "max": 160,
+      "step": 10,
+      "default": 80,
+      "label": "上下呼吸空间"
+    },
+    {
+      "type": "range",
+      "id": "totem_rise_level",
+      "min": 50,
+      "max": 90,
+      "step": 5,
+      "default": 65,
+      "label": "图腾升起高度"
+    },
+    {
+      "type": "color",
+      "id": "bg_color",
+      "label": "背景色",
+      "default": "#050505"
+    },
+    {
+      "type": "header",
+      "content": "🔠 字体控制"
+    },
+    {
+      "type": "range",
+      "id": "font_size_base",
+      "min": 14,
+      "max": 24,
+      "step": 1,
+      "default": 18,
+      "label": "基础字号 (Desktop)"
+    },
+    { "type": "header", "content": "🔥 火之配置" },
+    { "type": "richtext", "id": "verdict_fire", "label": "判决文案", "default": "<p>你的灵魂由<strong>灰烬</strong>铸造。</p>" },
+    { "type": "text", "id": "btn_fire", "label": "按钮文案", "default": "迎接烈火" },
+    { "type": "color", "id": "color_fire", "label": "极化色", "default": "#ff3300" },
+    { "type": "image_picker", "id": "img_fire", "label": "火之图腾" },
+    { "type": "collection", "id": "slot_fire", "label": "绑定系列" },
+
+    { "type": "header", "content": "💧 水之配置" },
+    { "type": "richtext", "id": "verdict_water", "label": "判决文案", "default": "<p>你的灵魂在<strong>深渊</strong>中呼吸。</p>" },
+    { "type": "text", "id": "btn_water", "label": "按钮文案", "default": "潜入深海" },
+    { "type": "color", "id": "color_water", "label": "极化色", "default": "#00aaff" },
+    { "type": "image_picker", "id": "img_water", "label": "水之图腾" },
+    { "type": "collection", "id": "slot_water", "label": "绑定系列" },
+
+    { "type": "header", "content": "🌲 木之配置" },
+    { "type": "richtext", "id": "verdict_wood", "label": "判决文案", "default": "<p>你与<strong>纠缠</strong>共生。</p>" },
+    { "type": "text", "id": "btn_wood", "label": "按钮文案", "default": "步入迷林" },
+    { "type": "color", "id": "color_wood", "label": "极化色", "default": "#00aa55" },
+    { "type": "image_picker", "id": "img_wood", "label": "木之图腾" },
+    { "type": "collection", "id": "slot_wood", "label": "绑定系列" },
+
+    { "type": "header", "content": "⚔️ 金之配置" },
+    { "type": "richtext", "id": "verdict_metal", "label": "判决文案", "default": "<p>唯有<strong>戒律</strong>使你自由。</p>" },
+    { "type": "text", "id": "btn_metal", "label": "按钮文案", "default": "接受裁决" },
+    { "type": "color", "id": "color_metal", "label": "极化色", "default": "#e0e0e0" },
+    { "type": "image_picker", "id": "img_metal", "label": "金之图腾" },
+    { "type": "collection", "id": "slot_metal", "label": "绑定系列" },
+
+    { "type": "header", "content": "⛰️ 土之配置" },
+    { "type": "richtext", "id": "verdict_earth", "label": "判决文案", "default": "<p>你是<strong>疆域</strong>的统治者。</p>" },
+    { "type": "text", "id": "btn_earth", "label": "按钮文案", "default": "加冕为王" },
+    { "type": "color", "id": "color_earth", "label": "极化色", "default": "#8b4513" },
+    { "type": "image_picker", "id": "img_earth", "label": "土之图腾" },
+    { "type": "collection", "id": "slot_earth", "label": "绑定系列" }
+  ],
+  "presets": [
+    { "name": "灵魂药铺 (智能内核)" }
+  ]
+}
+{% endschema %}
